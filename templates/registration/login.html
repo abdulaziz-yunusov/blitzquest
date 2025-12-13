@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Login – BlitzQuest{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+{% block content %}
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-card-header">
+            <div class="auth-logo-circle">BQ</div>
+            <div class="auth-card-heading">
+                <h2 class="auth-title">Welcome back</h2>
+                <p class="auth-subtitle">
+                    Sign in to continue your BlitzQuest matches.
+                </p>
+            </div>
+        </div>
+
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+
+            {% for field in form %}
+                <div class="form-row">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <div class="helptext">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <div class="message message-error" style="margin-top: 0.15rem;">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            {% if form.non_field_errors %}
+                <div class="message message-error" style="margin-top: 0.35rem;">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}<br>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="auth-submit-row">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+            </div>
+        </form>
+
+        <div class="auth-switch">
+            New here?
+            <a href="{% url 'signup' %}">Create an account</a>.
+        </div>
+    </div>
+</div>
+{% endblock %}

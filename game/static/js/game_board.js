@@ -1,0 +1,410 @@
+// ---------- helpers ----------
+
+function getCookie(name) {
+    if (!document.cookie) return null;
+    const cookies = document.cookie.split(";").map(c => c.trim());
+    for (const c of cookies) {
+        if (c.startsWith(name + "=")) {
+            return decodeURIComponent(c.substring(name.length + 1));
+        }
+    }
+    return null;
+}
+
+function escapeHtml(str) {
+    if (str === null || str === undefined) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// ---------- UI: board ----------
+// Tiles are rendered strictly in ascending position order (0..49),
+// and displayed as 1..50 in the index badge.
+
+function updateBoardUI(state) {
+    if (!state) return;
+    const container = document.getElementById("board-tiles");
+    if (!container) return;
+
+    const tilesRaw = Array.isArray(state.tiles) ? state.tiles : [];
+    const playersRaw = Array.isArray(state.players) ? state.players : [];
+
+    // FIX: Deduplicate players by ID to prevent visual "4 players" bug
+    const seenIds = new Set();
+    const players = [];
+    for (const p of playersRaw) {
+        if (!seenIds.has(p.id)) {
+            seenIds.add(p.id);
+            players.push(p);
+        }
+    }
+
+    // Group players by tile position
+    const playersByPos = {};
+    for (const p of players) {
+        const pos = typeof p.position === "number" ? p.position : 0;
+        if (!playersByPos[pos]) playersByPos[pos] = [];
+        playersByPos[pos].push(p);
+    }
+
+    // Ensure stable ordering 0..N by position
+    const tiles = tilesRaw.slice().sort((a, b) => {
+        const pa = typeof a.position === "number" ? a.position : 0;
+        const pb = typeof b.position === "number" ? b.position : 0;
+        return pa - pb;
+    });
+
+    const html = tiles.map(tile => {
+        // ... (keep existing tile rendering logic)
+        const pos = typeof tile.position === "number" ? tile.position : 0;
+        const tPlayers = playersByPos[pos] || [];
+        const hasCurrent = tPlayers.some(p => p.is_current_turn);
+
+        let label = tile.label || "";
+        const type = tile.type || tile.tile_type || "empty";
+
+        if (!label) {
+             // ... (keep existing label switch case)
+            switch (type) {
+                case "start":     label = "Start"; break;
+                case "finish":    label = "Finish"; break;
+                case "trap":      label = "Trap"; break;
+                case "heal":      label = "Heal"; break;
+                case "bonus":     label = "Bonus"; break;
+                case "question":  label = "?"; break;
+                case "warp":      label = "Warp"; break;
+                case "mass_warp": label = "Mass Warp"; break;
+                case "duel":      label = "Duel"; break;
+                case "shop":      label = "Shop"; break;
+                default:          label = ""; break;
+            }
+        }
+
+        // ... (keep rest of tile map logic)
+        const tileClasses = ["board-tile", `board-tile-${type}`];
+        if (hasCurrent) tileClasses.push("board-tile-current");
+
+        return `
+            <div class="${tileClasses.join(" ")}" data-position="${pos}">
+                <div class="board-tile-index">${pos + 1}</div>
+                <div class="board-tile-label">${escapeHtml(label)}</div>
+                <div class="board-tile-players"></div>
+                <div class="tile-tokens"></div>
+            </div>
+        `;
+    }).join("");
+
+    container.innerHTML = html || "<div>No tiles.</div>";
+}
+
+// ---------- UI: players panel ----------
+
+function updatePlayersUI(state) {
+    if (!state) return;
+
+    const listEl = document.getElementById("player-list");
+    const countEl = document.getElementById("player-count");
+
+    const playersRaw = Array.isArray(state.players) ? state.players : [];
+
+    // FIX: Deduplicate players here as well for the sidebar list
+    const seenIds = new Set();
+    const players = [];
+    for (const p of playersRaw) {
+        if (!seenIds.has(p.id)) {
+            seenIds.add(p.id);
+            players.push(p);
+        }
+    }
+
+    if (countEl) {
+        const maxPlayers = window.GAME_MAX_PLAYERS || "?";
+        countEl.textContent = `${players.length} / ${maxPlayers}`;
+    }
+
+    if (!listEl) return;
+
+    const hostUserId = window.GAME_HOST_USER_ID;
+
+    const playersHtml = players.map(p => {
+        // ... (keep existing player row rendering)
+        const isHost = (hostUserId !== null && p.user_id === hostUserId);
+        const isFirstTurnOrder = p.turn_order === 0;
+
+        let rolesHtml = "";
+        if (isHost) rolesHtml += '<span class="player-role">Host</span>';
+        if (isFirstTurnOrder) rolesHtml += '<span class="player-role player-role-turn">Turn order #1</span>';
+        if (p.is_current_turn) rolesHtml += '<span class="player-role player-role-turn">Current turn</span>';
+        if (p.is_you) rolesHtml += '<span class="player-role player-role-you">You</span>';
+
+        const statusBadge = p.is_alive
+            ? '<span class="badge badge-soft">Alive</span>'
+            : '<span class="badge badge-soft badge-soft-danger">Eliminated</span>';
+
+        return `
+            <li class="player-row">
+                <div class="player-main">
+                    <div class="player-avatar">
+                        ${escapeHtml(p.username.charAt(0).toUpperCase())}
+                    </div>
+                    <div class="player-text">
+                        <div class="player-name">
+                            ${escapeHtml(p.username)}
+                            ${rolesHtml}
+                        </div>
+                        <div class="player-meta">
+                            Turn order: ${p.turn_order + 1}
+                        </div>
+                    </div>
+                </div>
+                <div class="player-stats">
+                    <span class="player-stat">HP: <strong>${p.hp}</strong></span>
+                    <span class="player-stat">Coins: <strong>${p.coins}</strong></span>
+                    <span class="player-stat">Pos: <strong>${p.position}</strong></span>
+                    <span class="player-stat">${statusBadge}</span>
+                </div>
+            </li>
+        `;
+    }).join("");
+
+    listEl.innerHTML = playersHtml || "<li>No players.</li>";
+}
+// ---------- UI: dice / turn ----------
+
+function updateDiceUI(state) {
+    const labelEl = document.getElementById("current-turn-label");
+    const rollButton = document.getElementById("roll-button");
+    const diceDisplay = document.getElementById("dice-display");
+
+    if (!state) return;
+
+    if (state.status !== "active") {
+        if (labelEl) labelEl.textContent = "Game is not active.";
+        if (rollButton) rollButton.disabled = true;
+        return;
+    }
+
+    const players = Array.isArray(state.players) ? state.players : [];
+    const current = players.find(p => p.is_current_turn);
+    const youId = state.you_player_id;
+    const isYourTurn = current && current.id === youId;
+
+    if (labelEl) {
+        if (current) {
+            labelEl.textContent = `Current player: ${current.username}` + (isYourTurn ? " (you)" : "");
+        } else {
+            labelEl.textContent = "Current player: unknown.";
+        }
+    }
+
+    if (rollButton) {
+        rollButton.disabled = !isYourTurn || !players.some(p => p.is_alive);
+    }
+
+    if (state.status === "finished") {
+        if (rollButton) rollButton.disabled = true;
+        if (labelEl) labelEl.textContent = "Game finished.";
+    }
+
+    if (diceDisplay && !diceDisplay.dataset.hasValue) {
+        const currentName = current && current.username ? current.username : null;
+        diceDisplay.textContent = isYourTurn
+            ? "It is your turn. Roll the dice."
+            : (currentName ? `Waiting for ${currentName} to roll.` : "Waiting for the current player to roll.");
+    }
+}
+
+// ---------- fetch state ----------
+
+async function fetchGameState(gameId) {
+    try {
+        const resp = await fetch(`/games/${gameId}/state/`, {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        updateBoardUI(data);
+        updatePlayersUI(data);
+        updateDiceUI(data);
+        renderPlayerTokens(data);
+    } catch (e) {
+        console.error("board state error:", e);
+    }
+}
+
+// ---------- roll ----------
+
+async function handleRollClick(e) {
+    e.preventDefault();
+    const gameId = window.GAME_ID;
+    if (!gameId) return;
+
+    const rollButton = document.getElementById("roll-button");
+    const diceDisplay = document.getElementById("dice-display");
+    const logEl = document.getElementById("dice-log");
+
+    if (rollButton) rollButton.disabled = true;
+    if (diceDisplay) {
+        diceDisplay.textContent = "Rolling.";
+        diceDisplay.dataset.hasValue = "1";
+    }
+
+    try {
+        const resp = await fetch(`/games/${gameId}/roll/`, {
+            method: "POST",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                "X-CSRFToken": getCookie("csrftoken") || "",
+            },
+            body: new FormData(),
+        });
+
+        if (!resp.ok) {
+            let msg = `Error: ${resp.status}`;
+            try {
+                const errData = await resp.json();
+                if (errData.detail) msg = errData.detail;
+            } catch (_) {}
+            if (diceDisplay) diceDisplay.textContent = msg;
+            fetchGameState(gameId);
+            return;
+        }
+
+        const data = await resp.json();
+        const result = data.result || data.action || {};
+        const dice = result.dice;
+        const move = result.move || {};
+        const state = data.game_state;
+
+        if (diceDisplay && typeof dice !== "undefined") {
+            diceDisplay.textContent = `You rolled ${dice}.`;
+        }
+
+        if (logEl && move) {
+            const from = move.from_position;
+            const to = move.to_position;
+            const tileType = move.landed_tile_type;
+            const tileEffect = move.tile_effect || {};
+
+            let text = `Moved from ${from} to ${to}.`;
+            if (tileType) text += ` Landed on ${tileType}.`;
+            if (tileEffect.hp_delta) {
+                text += ` HP ${tileEffect.hp_delta > 0 ? "+" + tileEffect.hp_delta : tileEffect.hp_delta}.`;
+            }
+            if (tileEffect.coins_delta) {
+                text += ` Coins ${tileEffect.coins_delta > 0 ? "+" + tileEffect.coins_delta : tileEffect.coins_delta}.`;
+            }
+            if (tileEffect.extra && tileEffect.extra.died) text += " You died.";
+            if (tileEffect.extra && tileEffect.extra.opponent_died) text += " Opponent died.";
+
+            const p = document.createElement("p");
+            p.textContent = text;
+            logEl.prepend(p);
+        }
+
+        if (state) {
+            updateBoardUI(state);
+            updatePlayersUI(state);
+            updateDiceUI(state);
+            renderPlayerTokens(state);
+        }
+    } catch (e) {
+        console.error("roll error:", e);
+        const diceDisplay = document.getElementById("dice-display");
+        if (diceDisplay) diceDisplay.textContent = "Error while rolling.";
+    }
+}
+
+// ---------- tokens ----------
+
+function getPlayerInitials(player) {
+    const name = (player.username || "").trim();
+    if (!name) return "?";
+    const parts = name.split(/\s+/);
+    if (parts.length === 1) {
+        return parts[0].substring(0, 2).toUpperCase();
+    }
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function renderPlayerTokens(gameState) {
+    if (!gameState || !Array.isArray(gameState.players)) return;
+
+    // FIX: Deduplicate players for token rendering
+    const seenIds = new Set();
+    const uniquePlayers = [];
+    for (const p of gameState.players) {
+        if (!seenIds.has(p.id)) {
+            seenIds.add(p.id);
+            uniquePlayers.push(p);
+        }
+    }
+
+    // Clear existing tokens
+    const tiles = document.querySelectorAll(".board-tile");
+    tiles.forEach(tile => {
+        const tokenContainer = tile.querySelector(".tile-tokens");
+        if (tokenContainer) {
+            tokenContainer.innerHTML = "";
+        }
+    });
+
+    // Build mapping: tileIndex -> [players]
+    const playersByTile = {};
+    uniquePlayers.forEach(player => {
+        const pos = typeof player.position === "number" ? player.position : 0;
+        if (!playersByTile[pos]) {
+            playersByTile[pos] = [];
+        }
+        playersByTile[pos].push(player);
+    });
+
+    // Render tokens into each tile
+    Object.entries(playersByTile).forEach(([tileIndex, players]) => {
+        // ... (keep existing token DOM creation)
+        const tile = document.querySelector(
+            `.board-tile[data-position="${tileIndex}"]`
+        );
+        if (!tile) return;
+
+        let tokenContainer = tile.querySelector(".tile-tokens");
+        if (!tokenContainer) {
+            tokenContainer = document.createElement("div");
+            tokenContainer.classList.add("tile-tokens");
+            tile.appendChild(tokenContainer);
+        }
+
+        players.forEach((player, idx) => {
+            const token = document.createElement("div");
+            token.classList.add("player-token");
+
+            if (gameState.current_player_id &&
+                String(gameState.current_player_id) === String(player.id)) {
+                token.classList.add("player-token-current");
+            }
+
+            token.style.setProperty("--token-index", idx);
+            token.textContent = getPlayerInitials(player);
+            tokenContainer.appendChild(token);
+        });
+    });
+}
+
+
+// ---------- init ----------
+
+document.addEventListener("DOMContentLoaded", function () {
+    if (typeof window.GAME_ID === "undefined") return;
+
+    fetchGameState(window.GAME_ID);
+    window.__boardInterval = setInterval(function () {
+        fetchGameState(window.GAME_ID);
+    }, 2000);
+
+    const rollBtn = document.getElementById("roll-button");
+    if (rollBtn) rollBtn.addEventListener("click", handleRollClick);
+});

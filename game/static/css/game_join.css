@@ -1,0 +1,148 @@
+/* ========== Game Join Page – BlitzQuest ========== */
+
+.gj-page {
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.05fr);
+    gap: 1.3rem;
+}
+
+/* Cards */
+
+.gj-card {
+    border-radius: 20px;
+    background: radial-gradient(circle at top left,
+        rgba(148, 163, 184, 0.26),
+        rgba(15, 23, 42, 0.96)
+    );
+    border: 1px solid rgba(148, 163, 184, 0.38);
+    box-shadow: 0 20px 32px rgba(0, 0, 0, 0.6);
+    padding: 1.2rem 1.1rem 1.1rem;
+    font-size: 0.9rem;
+}
+
+.gj-card-side {
+    background: radial-gradient(circle at top right,
+        rgba(59, 130, 246, 0.22),
+        rgba(15, 23, 42, 0.96)
+    );
+}
+
+/* Main form card */
+
+.gj-title {
+    margin: 0 0 0.3rem;
+    font-size: 1.25rem;
+}
+
+.gj-subtitle {
+    margin: 0 0 1.1rem;
+    opacity: 0.86;
+}
+
+.gj-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.gj-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.gj-field label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.78;
+}
+
+.gj-field input {
+    padding: 0.55rem 0.75rem;
+    border-radius: 11px;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    background: rgba(15, 23, 42, 0.96);
+    color: #e2e8f0;
+    font-size: 0.9rem;
+}
+
+.gj-field input:focus {
+    outline: none;
+    border-color: rgba(129, 140, 248, 0.9);
+    box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.45);
+}
+
+.gj-help {
+    font-size: 0.75rem;
+    opacity: 0.72;
+}
+
+.gj-error,
+.gj-error-block {
+    font-size: 0.8rem;
+    color: #fecaca;
+    background: rgba(248, 113, 113, 0.14);
+    border-radius: 9px;
+    padding: 0.3rem 0.55rem;
+    border: 1px solid rgba(248, 113, 113, 0.6);
+}
+
+.gj-actions {
+    margin-top: 0.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.gj-secondary-link {
+    font-size: 0.84rem;
+    opacity: 0.85;
+}
+
+/* Side info card */
+
+.gj-side-title {
+    margin: 0 0 0.6rem;
+    font-size: 1.02rem;
+}
+
+.gj-side-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.8rem;
+    display: grid;
+    gap: 0.45rem;
+    font-size: 0.86rem;
+}
+
+.gj-side-list li::before {
+    content: "•";
+    margin-right: 0.45rem;
+    color: #a5b4fc;
+}
+
+.gj-divider {
+    height: 1px;
+    width: 100%;
+    margin: 0.6rem 0 0.7rem;
+    background: linear-gradient(to right,
+        rgba(148, 163, 184, 0),
+        rgba(148, 163, 184, 0.55),
+        rgba(148, 163, 184, 0)
+    );
+}
+
+/* Responsive */
+
+@media (max-width: 900px) {
+    .gj-page {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .gj-card {
+        padding-inline: 1rem;
+    }
+}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create game – BlitzQuest{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/game_create.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="gc-page">
+    <section class="gc-card gc-card-main">
+        <h2 class="gc-title">Create a new game</h2>
+        <p class="gc-subtitle">
+            Choose a mode, board length, and maximum number of players.
+            You’ll receive a lobby code to share with your friends.
+        </p>
+
+        <form method="post" class="gc-form">
+            {% csrf_token %}
+
+            {% for field in form %}
+                <div class="gc-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <div class="gc-help">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <div class="gc-error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            {% if form.non_field_errors %}
+                <div class="gc-error-block">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}<br>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="gc-actions">
+                <button type="submit" class="btn btn-primary">Create game</button>
+                <a href="{% url 'game:game_list' %}" class="gc-secondary-link">
+                    Cancel and go back
+                </a>
+            </div>
+        </form>
+    </section>
+
+    <section class="gc-card gc-card-side">
+        <h3 class="gc-side-title">Quick rules</h3>
+        <ul class="gc-side-list">
+            <li>Supports <strong>2–4 players</strong>.</li>
+            <li>Players start with <strong>3 HP</strong>, <strong>0 coins</strong>, and a random support card.</li>
+            <li>On your turn, you <strong>roll the dice</strong>, move, and trigger the tile effect.</li>
+            <li>Question tiles give you a kanji/quiz question; correct answers reward coins or bonuses.</li>
+            <li>Traps, warps, and duels can change positions, reduce HP, or target other players.</li>
+            <li>
+                <strong>Finish mode</strong>: first to reach the final tile wins.  
+                <strong>Survival mode</strong> (planned): last player standing wins.
+            </li>
+        </ul>
+        <p class="gc-side-note">
+            You can adjust the exact rules and tile layout later in development.
+        </p>
+    </section>
+</div>
+{% endblock %}
