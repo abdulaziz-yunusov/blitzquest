@@ -33,6 +33,21 @@
 
     <!-- Main layout: big board + right side panel -->
     <section class="board-layout">
+        <aside class="board-inventory">
+            <div class="sidebar-section">
+                <h3>Your inventory</h3>
+                <div class="inventory-meta">
+                <div>Shield: <strong id="inv-shield">0</strong></div>
+                <div>Extra rolls: <strong id="inv-extra-rolls">0</strong></div>
+                </div>
+
+                <div id="inventory-cards" class="inventory-cards"></div>
+
+                <div class="inventory-hint">
+                You can use support cards any time.
+                </div>
+            </div>
+        </aside>
 
         <!-- MAIN BOARD AREA -->
         <div class="board-main-wrap">
@@ -190,6 +205,65 @@
         </aside>
     </section>
 </div>
+<div id="finishModal" class="bq-modal bq-hidden" aria-hidden="true">
+  <div class="bq-modal-card" role="dialog" aria-modal="true" aria-labelledby="finishTitle">
+    <div class="bq-modal-header">
+      <h3 id="finishTitle" class="bq-modal-title">Congratulations!</h3>
+      <button type="button" class="bq-modal-close" id="finishCloseBtn" aria-label="Close">×</button>
+    </div>
+
+    <div class="bq-modal-body">
+      <p class="bq-modal-subtitle">Game finished. Final standings:</p>
+
+      <div class="bq-table-wrap">
+        <table class="bq-table">
+          <thead>
+            <tr>
+              <th style="width:64px;">#</th>
+              <th>Player</th>
+              <th style="width:90px;">Tile</th>
+              <th style="width:90px;">Coins</th>
+              <th style="width:70px;">HP</th>
+              <th style="width:120px;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="finishLeaderboardBody">
+            <!-- injected by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="bq-modal-footer">
+      <a id="backToLobbyBtn" class="btn btn-primary" href="{% url 'game:game_detail' game.id %}">
+        Back to lobby
+      </a>
+    </div>
+  </div>
+</div>
+<div id="questionModal" class="qmodal is-hidden" aria-hidden="true">
+    <div class="qmodal-backdrop"></div>
+
+    <div class="qmodal-card" role="dialog" aria-modal="true" aria-labelledby="qmodalTitle">
+        <div class="qmodal-header">
+            <h3 id="qmodalTitle">Question</h3>
+
+            <button id="changeQuestionBtn"
+                    class="qhead-btn"
+                    type="button"
+                    disabled
+                    title="Change question">
+                🔄 Change
+            </button>
+        </div>
+
+        <div class="qmodal-body">
+            <p id="qPrompt" class="qprompt"></p>
+                <div id="qChoices" class="qchoices"></div>
+            <p id="qFeedback" class="qfeedback"></p>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -197,6 +271,9 @@
     window.GAME_ID = {{ game.id|safe }};
     window.GAME_HOST_USER_ID = {{ game.host_id|default:"null"|safe }};
     window.GAME_MAX_PLAYERS = {{ game.max_players|safe }};
+</script>
+<script>
+  window.BQ_LOBBY_URL = "{% url 'game:game_detail' game.id %}";
 </script>
 <script src="{% static 'js/game_board.js' %}"></script>
 {% endblock %}

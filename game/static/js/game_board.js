@@ -20,6 +20,149 @@ function escapeHtml(str) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
+function showQuestionModal(q, state) {
+  const modal = document.getElementById("questionModal");
+  const prompt = document.getElementById("qPrompt");
+  const choicesWrap = document.getElementById("qChoices");
+  const feedback = document.getElementById("qFeedback");
+  const changeBtn = document.getElementById("changeQuestionBtn");
+
+  prompt.textContent = q.prompt || "";
+  feedback.textContent = "";
+  choicesWrap.innerHTML = "";
+
+  const gameId = window.GAME_ID;
+
+  // detect change-question card
+  const cards = state && Array.isArray(state.your_cards) ? state.your_cards : [];
+  const canChange = !!(q && !q.changed_once);
+  const changeCard = canChange
+    ? cards.find(c =>
+        (c.effect_type || "").toLowerCase() === "change_question" ||
+        (c.code || "").toLowerCase() === "change_question"
+      )
+    : null;
+
+  // header button behavior
+  if (!canChange) {
+    changeBtn.textContent = "🔄 Used";
+    changeBtn.disabled = true;
+  } else if (!changeCard) {
+    changeBtn.textContent = "🔄 No card";
+    changeBtn.disabled = true;
+  } else {
+    changeBtn.textContent = "🔄 Change";
+    changeBtn.disabled = false;
+  }
+
+  changeBtn.onclick = async () => {
+    if (!canChange || !changeCard) return;
+
+    // disable interactions while changing
+    changeBtn.disabled = true;
+    Array.from(choicesWrap.querySelectorAll("button")).forEach(b => (b.disabled = true));
+    feedback.textContent = "Changing question...";
+
+    try {
+      await useCard(gameId, changeCard.id);
+      // useCard() should refresh state and call showQuestionModal again
+    } catch (e) {
+      console.error(e);
+      feedback.textContent = "Could not change question.";
+      changeBtn.disabled = false;
+      Array.from(choicesWrap.querySelectorAll("button")).forEach(b => (b.disabled = false));
+    }
+  };
+
+  // render options (IMPORTANT: class must be qchoice-btn)
+  (q.choices || []).forEach((text, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "qchoice-btn";
+    btn.type = "button";
+    btn.dataset.qidx = String(idx);
+    btn.textContent = text;
+
+    btn.addEventListener("click", async () => {
+      Array.from(choicesWrap.querySelectorAll("button")).forEach(b => b.disabled = true);
+      changeBtn.disabled = true;
+      try {
+        const resp = await fetch(`/games/${gameId}/answer_question/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": getCookie("csrftoken") || "",
+          },
+          body: JSON.stringify({ choice_index: idx }),
+        });
+
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          feedback.textContent = (data && data.detail) ? data.detail : `Error: ${resp.status}`;
+          Array.from(choicesWrap.querySelectorAll("button")).forEach(b => b.disabled = false);
+          return;
+        }
+
+        const correct = data?.result?.correct;
+        feedback.textContent = correct ? "Correct: +1 coin, +1 HP" : "Wrong: -1 HP";
+
+        // Visual feedback (green/red) + show correct option if wrong
+        try {
+          if (correct) {
+            btn.classList.add("correct");
+          } else {
+            btn.classList.add("wrong");
+            const correctIdx = (q && typeof q.correct_index === "number") ? q.correct_index : null;
+            if (correctIdx !== null) {
+              const correctBtn = choicesWrap.querySelector(`button[data-qidx="${correctIdx}"]`);
+              if (correctBtn) correctBtn.classList.add("correct");
+            }
+          }
+        } catch (e) { /* ignore styling errors */ }
+
+        // refresh UI
+        if (data.game_state) {
+          updateBoardUI(data.game_state);
+          updatePlayersUI(data.game_state);
+          updateDiceUI(data.game_state);
+          renderPlayerTokens(data.game_state);
+          renderQuestionUI(data.game_state);
+          renderInventoryUI(data.game_state);
+        } else {
+          fetchGameState(gameId);
+        }
+
+      } catch (e) {
+        console.error(e);
+        feedback.textContent = "Network error.";
+        Array.from(choicesWrap.querySelectorAll("button")).forEach(b => b.disabled = false);
+      }
+    });
+
+    choicesWrap.appendChild(btn);
+  });
+
+  modal.classList.remove("is-hidden");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+
+function hideQuestionModal() {
+    const modal = document.getElementById("questionModal");
+    if (!modal) return;
+    modal.classList.add("is-hidden");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function renderQuestionUI(state) {
+    if (!state) return;
+
+    if (state.pending_question) {
+        showQuestionModal(state.pending_question, state);
+    } else {
+        hideQuestionModal();
+    }
+}
 
 // ---------- UI: board ----------
 // Tiles are rendered strictly in ascending position order (0..49),
@@ -65,23 +208,29 @@ function updateBoardUI(state) {
         const hasCurrent = tPlayers.some(p => p.is_current_turn);
 
         let label = tile.label || "";
-        const type = tile.type || tile.tile_type || "empty";
+        const type = (tile.type || tile.tile_type || "empty").toLowerCase();
 
         if (!label) {
-             // ... (keep existing label switch case)
-            switch (type) {
-                case "start":     label = "Start"; break;
-                case "finish":    label = "Finish"; break;
-                case "trap":      label = "Trap"; break;
-                case "heal":      label = "Heal"; break;
-                case "bonus":     label = "Bonus"; break;
-                case "question":  label = "?"; break;
-                case "warp":      label = "Warp"; break;
-                case "mass_warp": label = "Mass Warp"; break;
-                case "duel":      label = "Duel"; break;
-                case "shop":      label = "Shop"; break;
-                default:          label = ""; break;
-            }
+        switch (type) {
+            case "start":     label = "Start"; break;
+            case "finish":    label = "Finish"; break;
+            case "trap":      label = "Trap"; break;
+            case "heal":      label = "Heal"; break;
+            case "bonus":     label = "Bonus"; break;
+            case "question":  label = "?"; break;
+            case "warp":      label = "Warp"; break;
+            case "mass_warp": label = "Mass Warp"; break;
+            case "duel":      label = "Duel"; break;
+            case "shop":      label = "Shop"; break;
+            default:          label = ""; break;
+        }
+        }
+
+        /* --- BONUS TILE HTML (🎁 + corner badge) --- */
+        let labelHtml = escapeHtml(label);
+
+        if (type === "bonus") {
+            labelHtml = `<div class="board-tile-symbol">🎁</div>`;
         }
 
         // ... (keep rest of tile map logic)
@@ -91,7 +240,7 @@ function updateBoardUI(state) {
         return `
             <div class="${tileClasses.join(" ")}" data-position="${pos}">
                 <div class="board-tile-index">${pos + 1}</div>
-                <div class="board-tile-label">${escapeHtml(label)}</div>
+                <div class="board-tile-label">${labelHtml}</div>
                 <div class="board-tile-players"></div>
                 <div class="tile-tokens"></div>
             </div>
@@ -218,6 +367,109 @@ function updateDiceUI(state) {
     }
 }
 
+
+// ---------- Support Cards (inventory) ----------
+
+async function useCard(gameId, cardId, targetPlayerId = null) {
+  const payload = { card_id: cardId };
+  if (targetPlayerId !== null) payload.target_player_id = targetPlayerId;
+
+  const resp = await fetch(`/games/${gameId}/use_card/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+      "X-CSRFToken": getCookie("csrftoken") || "",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    alert(data.detail || `Error ${resp.status}`);
+    return;
+  }
+
+  const state = data.game_state || data;
+
+  updateBoardUI(state);
+  updatePlayersUI(state);
+  updateDiceUI(state);
+  renderPlayerTokens(state);
+  renderQuestionUI(state);
+  renderInventoryUI(state);
+}
+
+function renderInventoryUI(state) {
+  const wrap = document.getElementById("inventory-cards");
+  if (!wrap) return;
+
+  const shieldEl = document.getElementById("inv-shield");
+  const extraEl = document.getElementById("inv-extra-rolls");
+
+  if (shieldEl) shieldEl.textContent = state.you_shield_points ?? 0;
+  if (extraEl) extraEl.textContent = state.you_extra_rolls ?? 0;
+
+  const cards = Array.isArray(state.your_cards) ? state.your_cards : [];
+
+  if (cards.length === 0) {
+    wrap.innerHTML = `<div class="muted">No cards</div>`;
+    return;
+  }
+
+  wrap.innerHTML = cards
+    .map(
+      (c) => `
+      <div class="inv-card">
+        <div class="inv-card-title">${escapeHtml(c.name)}</div>
+        <div class="inv-card-desc">${escapeHtml(c.description || "")}</div>
+        <button class="btn btn-sm btn-primary inv-use-btn"
+                data-card-id="${c.id}"
+                data-effect="${escapeHtml(c.effect_type || "")}">
+          Use
+        </button>
+      </div>
+    `
+    )
+    .join("");
+
+  wrap.querySelectorAll(".inv-use-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const cardId = btn.getAttribute("data-card-id");
+      const effect = btn.getAttribute("data-effect");
+      const gameId = window.GAME_ID;
+
+      // swap_position needs target player (adjacent)
+      if (effect === "swap_position") {
+        const players = Array.isArray(state.players) ? state.players : [];
+        const me = players.find((p) => p.is_you);
+        if (!me) {
+          alert("Could not identify your player.");
+          return;
+        }
+
+        const adjacent = players.filter(
+          (p) =>
+            !p.is_you &&
+            p.is_alive &&
+            (p.position === me.position - 1 || p.position === me.position + 1)
+        );
+
+        if (adjacent.length === 0) {
+          alert("No adjacent player to swap with.");
+          return;
+        }
+
+        // simplest: swap with first adjacent
+        useCard(gameId, cardId, adjacent[0].id);
+        return;
+      }
+
+      useCard(gameId, cardId);
+    });
+  });
+}
+
 // ---------- fetch state ----------
 
 async function fetchGameState(gameId) {
@@ -226,11 +478,27 @@ async function fetchGameState(gameId) {
             headers: { "X-Requested-With": "XMLHttpRequest" }
         });
         if (!resp.ok) return;
+
         const data = await resp.json();
+
         updateBoardUI(data);
         updatePlayersUI(data);
         updateDiceUI(data);
         renderPlayerTokens(data);
+        renderInventoryUI(data);
+
+        // NEW: if game finished -> show congrats popup + stop polling
+        if (data && (data.status === "finished" || data.has_winner === true)) {
+            // show modal (requires the modal HTML + bqOpenFinishModal from earlier)
+            bqOpenFinishModal(data);
+
+            // stop polling if you are polling with setInterval
+            if (window.gamePoller) {
+                clearInterval(window.gamePoller);
+                window.gamePoller = null;
+            }
+        }
+
     } catch (e) {
         console.error("board state error:", e);
     }
@@ -311,6 +579,8 @@ async function handleRollClick(e) {
             updatePlayersUI(state);
             updateDiceUI(state);
             renderPlayerTokens(state);
+            renderQuestionUI(state);
+            renderInventoryUI(state);
         }
     } catch (e) {
         console.error("roll error:", e);
@@ -408,3 +678,67 @@ document.addEventListener("DOMContentLoaded", function () {
     const rollBtn = document.getElementById("roll-button");
     if (rollBtn) rollBtn.addEventListener("click", handleRollClick);
 });
+function bqOpenFinishModal(state) {
+  const modal = document.getElementById("finishModal");
+  const tbody = document.getElementById("finishLeaderboardBody");
+  const closeBtn = document.getElementById("finishCloseBtn");
+  const backBtn = document.getElementById("backToLobbyBtn");
+
+  if (!modal || !tbody) return;
+
+  // Back button fallback if you prefer JS redirect
+  if (backBtn && window.BQ_LOBBY_URL) {
+    backBtn.href = window.BQ_LOBBY_URL;
+  }
+
+  // Render leaderboard
+  tbody.innerHTML = "";
+
+  const lb = (state && state.leaderboard) ? state.leaderboard : [];
+  lb.forEach(row => {
+    const status = (row.status || "").toLowerCase();
+    const pillClass =
+      status === "winner" ? "winner" :
+      status === "eliminated" ? "eliminated" : "alive";
+
+    const tr = document.createElement("tr");
+    if (row.rank === 1 || status === "winner") tr.classList.add("bq-row-winner");
+
+    tr.innerHTML = `
+      <td>${row.rank ?? ""}</td>
+      <td>${escapeHtml(row.username ?? "")}</td>
+      <td>${row.position ?? ""}</td>
+      <td>${row.coins ?? ""}</td>
+      <td>${row.hp ?? ""}</td>
+      <td><span class="bq-pill ${pillClass}">${escapeHtml(row.status ?? "")}</span></td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+
+  // Show modal
+  modal.classList.remove("bq-hidden");
+  modal.setAttribute("aria-hidden", "false");
+
+  // Close handlers
+  const close = () => {
+    modal.classList.add("bq-hidden");
+    modal.setAttribute("aria-hidden", "true");
+  };
+
+  if (closeBtn) closeBtn.onclick = close;
+
+  // Close when clicking backdrop (not the card)
+  modal.onclick = (e) => {
+    if (e.target === modal) close();
+  };
+
+  // ESC key closes
+  document.addEventListener("keydown", function escHandler(ev) {
+    if (ev.key === "Escape") {
+      close();
+      document.removeEventListener("keydown", escHandler);
+    }
+  });
+}
+

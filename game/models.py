@@ -1,8 +1,9 @@
-import random
+import random as _r
 
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth import get_user_model
 from django.db.models import Max
+from .questions import generate_math_question
 
 
 User = get_user_model()
@@ -57,8 +58,12 @@ class Game(models.Model):
         related_name="won_games",
     )
 
+    enabled_tiles = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # When set, question is active and MUST be answered by for_player_id before turn advances
+    pending_question = models.JSONField(null=True, blank=True)
 
     def __str__(self) -> str:
         return f"Game {self.code} ({self.get_status_display()})"
@@ -66,6 +71,7 @@ class Game(models.Model):
     @property
     def is_active(self) -> bool:
         return self.status == self.Status.ACTIVE
+
     @property
     def players_by_turn_order(self):
         """
@@ -87,11 +93,46 @@ class Game(models.Model):
         index = self.current_turn_index % len(players)
         return players[index]
 
+    # ---------------------------
+    # NEW: keep turn locked to pending question owner
+    # ---------------------------
+    def sync_turn_to_pending_question(self) -> bool:
+        """
+        If there is a pending question, ensure current_turn_index points to
+        the player who must answer it.
+        Returns True if changed.
+        """
+        pq = self.pending_question
+        if not pq:
+            return False
+
+        pid = pq.get("for_player_id")
+        if not pid:
+            return False
+
+        players = list(self.players_by_turn_order)
+        if not players:
+            return False
+
+        for idx, p in enumerate(players):
+            if p.id == pid:
+                if self.current_turn_index != idx:
+                    self.current_turn_index = idx
+                    self.save(update_fields=["current_turn_index"])
+                    return True
+                return False
+
+        return False
+
     def to_public_state(self, for_user=None):
         """
         JSON-serializable representation of the game state.
         """
         UserModel = get_user_model()
+
+        # Ensure consistency: if question is pending, lock turn to that player
+        # (safe + doesn't change game logic; just prevents drift)
+        self.sync_turn_to_pending_question()
 
         # Players list
         players_qs = self.players.select_related("user").order_by("turn_order")
@@ -99,12 +140,30 @@ class Game(models.Model):
 
         current = self.current_player
 
+        # Determine `me` (PlayerInGame for the requesting user) early so
+        # pending question reveal logic can reference it safely.
         me = None
         if for_user is not None and isinstance(for_user, UserModel):
             for p in players_list:
                 if p.user_id == for_user.id:
                     me = p
                     break
+
+        pending_payload = None
+        pending_for_player_id = None
+        pending_active = bool(self.pending_question)
+
+        if self.pending_question:
+            pending_for_player_id = self.pending_question.get("for_player_id")
+
+            # Only reveal the question content to the player who must answer
+            if me is not None and pending_for_player_id == me.id:
+                pending_payload = {
+                    "id": self.pending_question.get("id"),
+                    "prompt": self.pending_question.get("prompt"),
+                    "choices": self.pending_question.get("choices", []),
+                    "changed_once": bool(self.pending_question.get("changed_once")),
+                }
 
         players_payload = []
         for p in players_list:
@@ -132,13 +191,13 @@ class Game(models.Model):
                     "position": tile.position,
                     "type": tile.tile_type,
                     "type_display": tile.get_tile_type_display(),
-                    "label": tile.label,          # NEW (your unified model)
-                    "value_int": tile.value_int,  # NEW (replaces old 'value')
-                    "config": tile.config or {},  # unchanged
+                    "label": tile.label,
+                    "value_int": tile.value_int,
+                    "config": tile.config or {},
                 }
             )
 
-        return {
+        payload = {
             "id": self.id,
             "code": self.code,
             "mode": self.mode,
@@ -152,12 +211,35 @@ class Game(models.Model):
             "players": players_payload,
             "tiles": tiles_payload,
             "you_player_id": me.id if me is not None else None,
+            "pending_question": pending_payload,
+            "pending_question_active": pending_active,
+            "pending_question_for_player_id": pending_for_player_id,
         }
+
+        # --- Support cards inventory ---
+        if me is not None:
+            payload["your_cards"] = [
+                {
+                    "id": c.id,
+                    "name": c.card_type.name,
+                    "code": c.card_type.code,
+                    "description": c.card_type.description,
+                    "effect_type": c.card_type.effect_type,
+                    "params": c.card_type.params or {},
+                    "is_used": c.is_used,
+                }
+                for c in me.cards.select_related("card_type").all()
+                if not c.is_used
+            ]
+            payload["you_shield_points"] = getattr(me, "shield_points", 0)
+            payload["you_extra_rolls"] = getattr(me, "extra_rolls", 0)
+
+        if self.status == "finished" or self.winner_id is not None:
+            payload["leaderboard"] = self.build_leaderboard()
+
+        return payload
+
     def last_tile_index(self) -> int:
-        """
-        Returns the index of the last tile on the board.
-        Prefers actual tiles' max position; falls back to board_length - 1.
-        """
         max_pos = self.tiles.aggregate(max_pos=Max("position"))["max_pos"]
         if max_pos is not None:
             return max_pos
@@ -165,23 +247,12 @@ class Game(models.Model):
         if self.board_length and self.board_length > 0:
             return self.board_length - 1
 
-        # Very defensive fallback
         return 0
 
     def get_player_for_user(self, user):
-        """
-        Convenience helper to get PlayerInGame object for a given user.
-        """
         return self.players.select_related("user").get(user=user)
 
     def apply_basic_move(self, player, dice_value: int) -> dict:
-        """
-        Move `player` forward by `dice_value` steps on this game’s board.
-        Handles reaching the finish tile and setting winner.
-        Also executes the landed tile's effect (TRAP, HEAL, BONUS, WARP, etc.).
-
-        Returns a dict describing the movement result + tile effects.
-        """
         from_pos = player.position
         last_index = self.last_tile_index()
 
@@ -197,39 +268,31 @@ class Game(models.Model):
         won = False
         tile_effect = None
 
-        # If we landed on FINISH -> instant win, no extra tile effects
         if landed_tile and landed_tile.tile_type == BoardTile.TileType.FINISH:
             self.status = Game.Status.FINISHED
             self.winner = player
             self.save(update_fields=["status", "winner"])
             won = True
         else:
-            # Execute tile effects (may modify player, positions, hp, coins, etc.)
             if landed_tile:
                 tile_effect = self.execute_tile_effect(player, landed_tile)
 
         return {
             "from_position": from_pos,
-            "to_position": player.position,  # may be modified by WARP/MASS_WARP
+            "to_position": player.position,
             "dice_value": dice_value,
             "won": won,
             "landed_tile_id": landed_tile.id if landed_tile else None,
             "landed_tile_type": landed_tile.tile_type if landed_tile else None,
             "tile_effect": tile_effect,
         }
-    def execute_tile_effect(self, player, tile):
-        """
-        Apply the effect of `tile` to `player` (and sometimes other players).
-        Uses:
-          - tile.tile_type
-          - tile.value_int
-          - tile.config
 
-        Returns a dict describing what happened (for frontend logs/UI).
-        """
+    def execute_tile_effect(self, player, tile, *, ctx=None):
         t = tile.tile_type
         value = tile.value_int
         cfg = tile.config or {}
+        if ctx is None:
+            ctx = {}
 
         effects = {
             "tile_type": t,
@@ -242,36 +305,25 @@ class Game(models.Model):
             "extra": {},
         }
 
-        # --- Helpers ---
         def clamp_position(pos: int) -> int:
             return max(0, min(pos, self.last_tile_index()))
 
-        # Current baseline
         start_pos = player.position
 
-        # ---------- EMPTY ----------
-        if t == BoardTile.TileType.EMPTY or t == BoardTile.TileType.START:
-            # No effect
+        if t == BoardTile.TileType.SAFE or t == BoardTile.TileType.START:
             return effects
 
-        # ---------- TRAP (HP -) ----------
         if t == BoardTile.TileType.TRAP:
             hp_delta = value if value is not None else cfg.get("hp_delta", -1)
             if hp_delta == 0:
                 hp_delta = -1
+            if hp_delta > 0:
+                hp_delta = -hp_delta
 
-            player.hp += hp_delta
-            effects["hp_delta"] = hp_delta
-
-            if player.hp <= 0:
-                player.hp = 0
-                player.is_alive = False
-                effects["extra"]["died"] = True
-
-            player.save(update_fields=["hp", "is_alive"])
+            damage = abs(int(hp_delta))
+            self.apply_damage(player, damage, effects, source="trap")
             return effects
 
-        # ---------- HEAL (HP +) ----------
         if t == BoardTile.TileType.HEAL:
             hp_delta = value if value is not None else cfg.get("hp_delta", 1)
             if hp_delta == 0:
@@ -283,128 +335,173 @@ class Game(models.Model):
             player.save(update_fields=["hp"])
             return effects
 
-        # ---------- BONUS (coins +) ----------
         if t == BoardTile.TileType.BONUS:
-            coins_delta = value if value is not None else cfg.get("coins_delta", 1)
-            if coins_delta == 0:
-                coins_delta = 1
+            active_types = list(SupportCardType.objects.filter(is_active=True))
+            if not active_types:
+                effects["extra"]["no_cards_available"] = True
+                return effects
 
-            player.coins += coins_delta
-            effects["coins_delta"] = coins_delta
+            card_type = _r.choice(active_types)
+            SupportCardInstance.objects.create(card_type=card_type, owner=player)
 
-            player.save(update_fields=["coins"])
+            effects["extra"]["granted_card"] = {
+                "name": card_type.name,
+                "code": card_type.code,
+                "effect_type": card_type.effect_type,
+                "params": card_type.params or {},
+            }
             return effects
 
         # ---------- QUESTION ----------
         if t == BoardTile.TileType.QUESTION:
-            # For now: auto-reward, no UI question yet.
-            reward = value if value is not None else cfg.get("reward_coins", 2)
-            if reward == 0:
-                reward = 2
+            # Pause the game and ask via UI. Do not auto-reward.
+            if not self.pending_question:
+                self.pending_question = { **generate_math_question(), "for_player_id": player.id }
 
-            player.coins += reward
-            effects["coins_delta"] = reward
-            effects["extra"]["auto_answered"] = True
+                # lock turn to the same player who must answer
+                players = list(self.players.order_by("turn_order"))
+                for idx, p in enumerate(players):
+                    if p.id == player.id:
+                        self.current_turn_index = idx
+                        break
 
-            player.save(update_fields=["coins"])
+                self.save(update_fields=["pending_question", "current_turn_index"])
+
+            effects["extra"]["question_triggered"] = True
             return effects
 
-        # ---------- WARP (single player move) ----------
         if t == BoardTile.TileType.WARP:
-            # value_int can be steps OR absolute target; default to relative move
-            offset = cfg.get("warp_offset")
-            if offset is None:
-                # fallback: use value as offset; default 2
-                offset = value if value is not None else 2
-            try:
-                offset = int(offset)
-            except (TypeError, ValueError):
-                offset = 2
+            board_size = int(effects["extra"].get("board_size") or 0)
+            if not board_size:
+                board_size = self.tiles.count() if hasattr(self, "tiles") else 50
 
-            new_pos = clamp_position(start_pos + offset)
+            distance = _r.randint(1, 3)
+            direction = _r.choice([-1, 1])
+            delta = direction * distance
+
+            new_pos = (start_pos + delta) % board_size
+
             player.position = new_pos
             player.save(update_fields=["position"])
 
-            effects["position_delta"] = new_pos - start_pos
+            effects["position_delta"] = delta
             effects["position_set"] = new_pos
+            effects["extra"].update({
+                "warp": {
+                    "range": [1, 3],
+                    "direction": "forward" if direction == 1 else "back",
+                    "distance": distance,
+                    "from": start_pos,
+                    "to": new_pos,
+                }
+            })
             return effects
 
-        # ---------- MASS_WARP (all players move) ----------
         if t == BoardTile.TileType.MASS_WARP:
-            # Move all alive players to the same target position
-            target = cfg.get("warp_target")
-            if target is None:
-                target = value if value is not None else self.last_tile_index() // 2
+            if ctx.get("mass_warp_fired"):
+                effects["extra"]["mass_warp"] = {"skipped": True, "reason": "mass_warp_already_fired"}
+                effects["position_delta"] = 0
+                effects["position_set"] = player.position
+                return effects
 
-            try:
-                target = int(target)
-            except (TypeError, ValueError):
-                target = self.last_tile_index() // 2
+            ctx["mass_warp_fired"] = True
 
-            target = clamp_position(target)
+            alive_players = list(self.players.filter(is_alive=True).order_by("id"))
+            if len(alive_players) < 2:
+                effects["extra"]["mass_warp"] = {"moved": [], "note": "Not enough alive players to swap."}
+                effects["position_delta"] = 0
+                effects["position_set"] = player.position
+                return effects
 
-            moved_ids = []
-            for p in self.players.filter(is_alive=True):
-                p.position = target
-                p.save(update_fields=["position"])
-                moved_ids.append(p.id)
+            old_positions = [p.position for p in alive_players]
+            new_positions = old_positions[:]
+            for _ in range(10):
+                _r.shuffle(new_positions)
+                if any(a != b for a, b in zip(old_positions, new_positions)):
+                    break
 
-            effects["position_set"] = target
-            effects["mass_moved_player_ids"] = moved_ids
+            moved = []
+            with transaction.atomic():
+                for p, old_pos, new_pos in zip(alive_players, old_positions, new_positions):
+                    p.position = new_pos
+                    moved.append({"player_id": p.id, "from": old_pos, "to": new_pos, "delta": new_pos - old_pos})
+                type(alive_players[0]).objects.bulk_update(alive_players, ["position"])
+
+            retriggered = []
+            queue = alive_players[:]
+            max_triggers = ctx.get("max_triggers", 50)
+            triggers_used = 0
+
+            while queue and triggers_used < max_triggers:
+                p = queue.pop(0)
+                landed_tile = self.tiles.filter(position=p.position).first()
+                if not landed_tile:
+                    continue
+
+                if landed_tile.tile_type == BoardTile.TileType.MASS_WARP:
+                    retriggered.append({"player_id": p.id, "tile": "MASS_WARP", "skipped": True})
+                    continue
+
+                triggers_used += 1
+                sub = self.execute_tile_effect(p, landed_tile, ctx=ctx)
+
+                retriggered.append({
+                    "player_id": p.id,
+                    "tile": landed_tile.tile_type,
+                    "effects": sub.get("extra", sub),
+                })
+
+                if sub.get("position_set") is not None and sub["position_set"] != p.position:
+                    queue.append(p)
+
+            effects["extra"]["mass_warp"] = {
+                "mode": "shuffle_positions",
+                "moved": moved,
+                "retriggered": retriggered,
+                "triggers_used": triggers_used,
+                "max_triggers": max_triggers,
+            }
+            effects["position_delta"] = 0
+            effects["position_set"] = player.position
             return effects
 
-        # ---------- DUEL ----------
         if t == BoardTile.TileType.DUEL:
-            # Simple logic: 50/50 win-lose against a random other alive player
-            other_players = list(
-                self.players.filter(is_alive=True).exclude(id=player.id)
-            )
+            other_players = list(self.players.filter(is_alive=True).exclude(id=player.id))
             if not other_players:
-                # nobody to duel
+                effects.setdefault("extra", {})
                 effects["extra"]["no_opponent"] = True
                 return effects
 
-            import random as _r
             opponent = _r.choice(other_players)
 
-            reward_coins = cfg.get("reward_coins", 2)
-            penalty_hp = cfg.get("penalty_hp", 1)
+            cfg = cfg or {}
+            reward_coins = int(cfg.get("reward_coins", 2) or 2)
+            penalty_hp = int(cfg.get("penalty_hp", 1) or 1)
+            if penalty_hp < 0:
+                penalty_hp = abs(penalty_hp)
 
+            effects.setdefault("extra", {})
             win = _r.choice([True, False])
             effects["extra"]["opponent_id"] = opponent.id
             effects["extra"]["won_duel"] = win
 
             if win:
-                # player gains coins, opponent loses some HP
-                player.coins += reward_coins
-                opponent.hp -= penalty_hp
+                player.coins = int(player.coins or 0) + reward_coins
+                player.save(update_fields=["coins"])
+                effects["coins_delta"] = effects.get("coins_delta", 0) + reward_coins
 
-                effects["coins_delta"] = reward_coins
-                if opponent.hp <= 0:
-                    opponent.hp = 0
-                    opponent.is_alive = False
+                dmg_result = self.apply_damage(opponent, penalty_hp, effects, source="duel")
+                if dmg_result.get("died"):
                     effects["extra"]["opponent_died"] = True
 
-                player.save(update_fields=["coins"])
-                opponent.save(update_fields=["hp", "is_alive"])
             else:
-                # player loses HP
-                player.hp -= penalty_hp
-                effects["hp_delta"] = -penalty_hp
-
-                if player.hp <= 0:
-                    player.hp = 0
-                    player.is_alive = False
+                dmg_result = self.apply_damage(player, penalty_hp, effects, source="duel")
+                if dmg_result.get("died"):
                     effects["extra"]["died"] = True
-
-                player.save(update_fields=["hp", "is_alive"])
 
             return effects
 
-        # ---------- SHOP ----------
         if t == BoardTile.TileType.SHOP:
-            # Very simple default: auto-buy HP if you have enough coins.
-            # cost and hp_gain can be tuned via config.
             cost = cfg.get("cost", 2)
             hp_gain = cfg.get("hp_gain", 1)
 
@@ -421,21 +518,82 @@ class Game(models.Model):
 
             return effects
 
-        # ---------- FINISH ----------
         if t == BoardTile.TileType.FINISH:
-            # Should already be handled before calling this, but just in case:
             return effects
 
-        # Fallback: no effect
         return effects
 
+    def apply_damage(self, player, damage: int, effects: dict | None = None, *, source: str | None = None):
+        dmg = max(0, int(damage or 0))
+        if dmg == 0:
+            return {"blocked": 0, "taken": 0, "died": False}
+
+        shield = int(getattr(player, "shield_points", 0) or 0)
+        blocked = min(shield, dmg)
+        taken = dmg - blocked
+
+        update_fields = []
+
+        if blocked:
+            player.shield_points = shield - blocked
+            update_fields.append("shield_points")
+
+        if taken:
+            player.hp = max(0, int(player.hp) - taken)
+            update_fields.append("hp")
+            if player.hp == 0:
+                player.is_alive = False
+                update_fields.append("is_alive")
+
+        if update_fields:
+            player.save(update_fields=sorted(set(update_fields)))
+
+        if effects is not None:
+            effects["hp_delta"] = effects.get("hp_delta", 0) - taken
+            extra = effects.setdefault("extra", {})
+            if blocked:
+                extra["shield_blocked"] = extra.get("shield_blocked", 0) + blocked
+            if source:
+                extra["damage_source"] = source
+
+        return {"blocked": blocked, "taken": taken, "died": (taken > 0 and player.hp == 0)}
+
+    def build_leaderboard(self):
+        players_qs = self.players.select_related("user").all()
+
+        ranked = sorted(
+            players_qs,
+            key=lambda p: (
+                -int(p.position or 0),
+                -int(p.coins or 0),
+                -int(p.hp or 0),
+            ),
+        )
+
+        leaderboard = []
+        for idx, p in enumerate(ranked, start=1):
+            if idx == 1 and self.winner_id:
+                status = "Winner"
+            else:
+                status = "Alive" if getattr(p, "is_alive", True) else "Eliminated"
+
+            leaderboard.append(
+                {
+                    "rank": idx,
+                    "player_id": p.id,
+                    "user_id": p.user_id,
+                    "username": p.user.username,
+                    "position": p.position,
+                    "coins": p.coins,
+                    "hp": p.hp,
+                    "is_alive": p.is_alive,
+                    "status": status,
+                }
+            )
+
+        return leaderboard
 
     def advance_turn(self):
-        """
-        Move current_turn_index to the next *alive* player in turn order.
-        If no alive players remain, mark game as finished.
-        Returns the new current_player or None.
-        """
         players = list(self.players_by_turn_order)
         if not players:
             return None
@@ -443,7 +601,6 @@ class Game(models.Model):
         n = len(players)
         idx = self.current_turn_index
 
-        # Try at most n times to find next alive player
         for _ in range(n):
             idx = (idx + 1) % n
             candidate = players[idx]
@@ -452,62 +609,48 @@ class Game(models.Model):
                 self.save(update_fields=["current_turn_index"])
                 return candidate
 
-        # No alive players -> end game
         self.status = Game.Status.FINISHED
         self.save(update_fields=["status"])
         return None
 
     def roll_and_apply_for(self, player):
-        """
-        Full server-side action:
-          - roll a d6
-          - move the player
-          - execute tile effect
-          - if they did NOT win, advance to next player's turn
-        """
-        dice = random.randint(1, 6)
+        dice = _r.randint(1, 6)
 
         move_result = self.apply_basic_move(player, dice_value=dice)
 
+        # If a question is pending, hard-lock turn to that player
+        if self.pending_question:
+            self.sync_turn_to_pending_question()
+
         # If player did not win, go to next player's turn
-        if not move_result["won"]:
-            self.advance_turn()
+        if not move_result["won"] and not self.pending_question:
+            if getattr(player, "extra_rolls", 0) > 0:
+                player.extra_rolls -= 1
+                player.save(update_fields=["extra_rolls"])
+            else:
+                self.advance_turn()
 
         next_player = self.current_player
 
         return {
             "dice": dice,
-            "move": move_result,  # includes tile_effect as defined above
+            "move": move_result,
             "next_player_id": next_player.id if next_player else None,
             "game_finished": self.status == Game.Status.FINISHED,
             "winner_player_id": self.winner_id,
         }
 
-
     def generate_random_board(self):
-        """
-        Clears existing tiles and generates a fresh random linear board
-        using the unified BoardTile model.
-
-        Guarantees:
-          - position 0           => START
-          - position last        => FINISH
-          - middle positions     => random tile types (QUESTION, TRAP, HEAL, BONUS, etc.)
-        Uses self.board_length as total tiles (with a minimum).
-        """
-        # Ensure minimum length so the board is interesting
         length = max(self.board_length or 0, 8)
         if length != self.board_length:
             self.board_length = length
             self.save(update_fields=["board_length"])
 
-        # Remove old tiles for this game
         self.tiles.all().delete()
 
         TileModel = self.tiles.model
-        TT = TileModel.TileType
+        TT = BoardTile.TileType
 
-        # 1) START tile at position 0
         TileModel.objects.create(
             game=self,
             position=0,
@@ -517,12 +660,10 @@ class Game(models.Model):
             config={},
         )
 
-        # 2) Middle tiles (1 .. length-2)
         middle_positions = range(1, length - 1)
 
-        # Pool of types for middle tiles
-        tile_type_pool = [
-            TT.EMPTY,
+        default_pool = [
+            TT.SAFE,
             TT.TRAP,
             TT.HEAL,
             TT.BONUS,
@@ -532,87 +673,79 @@ class Game(models.Model):
             TT.DUEL,
             TT.SHOP,
         ]
-
-        # Weights: how often each type should appear (tweak freely)
-        tile_type_weights = [
-            6,  # EMPTY      (most common)
-            3,  # TRAP
-            3,  # HEAL
-            3,  # BONUS
-            2,  # QUESTION
-            1,  # WARP       (rare)
-            1,  # MASS_WARP  (rare)
-            1,  # DUEL       (rare)
-            1,  # SHOP       (rare)
+        selected = [
+            t for t in (self.enabled_tiles or [])
+            if t not in (TT.START, TT.FINISH) and t in dict(TT.choices)
         ]
+        if TT.SAFE not in selected:
+            selected.append(TT.SAFE)
+
+        tile_type_pool = selected or default_pool
+
+        default_weights = {
+            TT.SAFE: 0,
+            TT.TRAP: 3,
+            TT.HEAL: 3,
+            TT.BONUS: 3,
+            TT.QUESTION: 2,
+            TT.WARP: 1,
+            TT.MASS_WARP: 1,
+            TT.DUEL: 1,
+            TT.SHOP: 1,
+        }
+        tile_type_weights = [default_weights.get(t, 1) for t in tile_type_pool]
 
         for pos in middle_positions:
-            t = random.choices(tile_type_pool, weights=tile_type_weights, k=1)[0]
+            t = _r.choices(tile_type_pool, weights=tile_type_weights, k=1)[0]
 
             label = ""
             value_int = None
             config = {}
 
-            if t == TT.EMPTY:
+            if t == TT.SAFE:
                 label = ""
-                # no effect
             elif t == TT.TRAP:
-                hp_loss = random.randint(1, 3)
+                hp_loss = _r.randint(1, 3)
                 label = f"-{hp_loss} HP"
                 value_int = -hp_loss
                 config = {"hp_delta": -hp_loss}
             elif t == TT.HEAL:
-                hp_gain = random.randint(1, 3)
+                hp_gain = _r.randint(1, 3)
                 label = f"+{hp_gain} HP"
                 value_int = hp_gain
                 config = {"hp_delta": hp_gain}
             elif t == TT.BONUS:
-                coins = random.randint(1, 5)
+                coins = _r.randint(1, 5)
                 label = f"+{coins} C"
                 value_int = coins
                 config = {"coins_delta": coins}
             elif t == TT.QUESTION:
-                reward = random.randint(1, 4)
+                reward = _r.randint(1, 4)
                 label = "?"
                 value_int = reward
                 config = {
                     "kind": "question",
                     "reward_coins": reward,
-                    # later you can add question text & answers here
                 }
             elif t == TT.WARP:
-                # Relative move: -3..-1 or +1..+3
-                offset = random.choice([-3, -2, -1, 1, 2, 3])
+                offset = _r.choice([-3, -2, -1, 1, 2, 3])
                 label = "Warp"
                 value_int = offset
-                config = {
-                    "warp_offset": offset,
-                }
+                config = {"warp_offset": offset}
             elif t == TT.MASS_WARP:
-                # All players move to the same random tile (not start/finish)
-                target = random.randint(1, length - 2)
+                target = _r.randint(1, length - 2)
                 label = "Mass Warp"
                 value_int = target
-                config = {
-                    "warp_target": target,
-                    "affects": "all",
-                }
+                config = {"warp_target": target, "affects": "all"}
             elif t == TT.DUEL:
-                reward = random.randint(1, 4)
+                reward = _r.randint(1, 4)
                 label = "Duel"
                 value_int = reward
-                config = {
-                    "kind": "duel",
-                    "reward_coins": reward,
-                    "penalty_hp": 1,  # example default
-                }
+                config = {"kind": "duel", "reward_coins": reward, "penalty_hp": 1}
             elif t == TT.SHOP:
                 label = "Shop"
                 value_int = None
-                config = {
-                    "shop_level": random.randint(1, 3),
-                    # you can add item list later here
-                }
+                config = {"shop_level": _r.randint(1, 3)}
 
             TileModel.objects.create(
                 game=self,
@@ -623,7 +756,6 @@ class Game(models.Model):
                 config=config,
             )
 
-        # 3) FINISH tile at last position
         TileModel.objects.create(
             game=self,
             position=length - 1,
@@ -632,7 +764,6 @@ class Game(models.Model):
             value_int=None,
             config={},
         )
-
 
 
 class PlayerInGame(models.Model):
@@ -647,7 +778,6 @@ class PlayerInGame(models.Model):
         related_name="game_players",
     )
 
-    # 0–3 indicating turn order
     turn_order = models.PositiveSmallIntegerField(
         help_text="Order of turns within the game (0-based).",
     )
@@ -656,10 +786,18 @@ class PlayerInGame(models.Model):
     coins = models.PositiveIntegerField(default=0)
     position = models.PositiveSmallIntegerField(default=0)
 
+    shield_points = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Blocks incoming damage (negative HP deltas) until depleted.",
+    )
+    extra_rolls = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Extra dice rolls available (from Reroll Dice card).",
+    )
+
     is_alive = models.BooleanField(default=True)
     eliminated_at = models.DateTimeField(null=True, blank=True)
 
-    # Convenience metadata
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -680,13 +818,13 @@ class BoardTile(models.Model):
         HEAL = "heal", "Heal"
         BONUS = "bonus", "Bonus"
 
-        WARP = "warp", "Warp"                 # single-player teleport or move
-        MASS_WARP = "mass_warp", "Mass Warp"  # all players reposition
+        WARP = "warp", "Warp"
+        MASS_WARP = "mass_warp", "Mass Warp"
 
-        DUEL = "duel", "Duel"                 # challenge another player
-        SHOP = "shop", "Shop"                 # buy item (future expansion)
+        DUEL = "duel", "Duel"
+        SHOP = "shop", "Shop"
 
-        EMPTY = "empty", "Empty"
+        SAFE = "safe", "Safe"
 
     game = models.ForeignKey(
         Game,
@@ -701,24 +839,21 @@ class BoardTile(models.Model):
     tile_type = models.CharField(
         max_length=32,
         choices=TileType.choices,
-        default=TileType.EMPTY,
+        default=TileType.SAFE,
     )
 
-    # Optional readable label (useful for board UI)
     label = models.CharField(
         max_length=64,
         blank=True,
         help_text="Short label to show on the board (optional)."
     )
 
-    # Generic numeric effect (HP change, coin change, movement steps, warp position, etc.)
     value_int = models.IntegerField(
         null=True,
         blank=True,
         help_text="Optional numeric value (HP change, coin change, move steps, warp index, etc.)."
     )
 
-    # JSON config for tile-specific data (e.g., warp target, shop items, duel rules)
     config = models.JSONField(
         default=dict,
         blank=True,
@@ -731,7 +866,6 @@ class BoardTile(models.Model):
 
     def __str__(self) -> str:
         return f"Tile {self.position} ({self.get_tile_type_display()}) in {self.game.code}"
-
 
 
 class Question(models.Model):
@@ -793,6 +927,7 @@ class SupportCardType(models.Model):
         SWAP_POSITION = "swap_position", "Swap position with another player"
         CHANGE_QUESTION = "change_question", "Change question"
         CUSTOM = "custom", "Custom effect"
+        BONUS_COIN = "bonus_coin", "Bonus coin"
 
     name = models.CharField(max_length=64)
     code = models.SlugField(
