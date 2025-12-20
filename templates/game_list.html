@@ -99,15 +99,16 @@
                                     Open
                                 </a>
 
-                                {% if g.host_id == user.id %}
-                                    <form method="post"
-                                        action="{% url 'game:game_delete' g.id %}"
-                                        class="gl-delete-form">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-outline-small gl-delete-btn">
-                                            Delete
-                                        </button>
-                                    </form>
+                                {% if g.host == request.user %}
+                                <form action="{% url 'game:game_delete' g.id %}"
+                                    method="post"
+                                    class="delete-form"
+                                    onsubmit="return confirm('Delete game {{ g.code }}?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-small gl-delete-btn">
+                                        Delete
+                                    </button>
+                                </form>
                                 {% endif %}
                             </div>
                         </li>

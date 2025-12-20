@@ -20,6 +20,7 @@
             {% csrf_token %}
 
             {% for field in form %}
+                {% if field.name != 'enabled_tiles' %}
                 <div class="gc-field">
                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                     {{ field }}
@@ -30,6 +31,7 @@
                         <div class="gc-error">{{ error }}</div>
                     {% endfor %}
                 </div>
+                {% endif %}
             {% endfor %}
 
             {% if form.non_field_errors %}
@@ -39,6 +41,15 @@
                     {% endfor %}
                 </div>
             {% endif %}
+            <div class="form-group">
+                <label>{{ form.enabled_tiles.label }}</label>
+                <div class="checkbox-grid">
+                    {{ form.enabled_tiles }}
+                </div>
+                {% if form.enabled_tiles.errors %}
+                    <div class="form-error">{{ form.enabled_tiles.errors }}</div>
+                {% endif %}
+            </div>
 
             <div class="gc-actions">
                 <button type="submit" class="btn btn-primary">Create game</button>
