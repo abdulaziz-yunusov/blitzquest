@@ -22,7 +22,7 @@ SECRET_KEY = os.environ.get(
     "unsafe-secret-key-for-local-only"
 )
 
-DEBUG = True
+DEBUG = False
 
 
 # ==================================================
@@ -33,16 +33,12 @@ ALLOWED_HOSTS = [
     "zoovita.uz",
     "www.zoovita.uz",
     "blitzquest.onrender.com",
-    "localhost",
-    "127.0.0.1",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://zoovita.uz",
     "https://www.zoovita.uz",
     "https://blitzquest.onrender.com",
-    "http://localhost",
-    "http://127.0.0.1",
 ]
 
 # Render reverse proxy fix (prevents 400 Bad Request)
