@@ -188,6 +188,13 @@
                         Lobby status
                     {% elif game.status == 'active' %}
                         Game in progress
+                    {% elif game.status == "drafting" %}
+                        <div class="info-box">
+                            <p>🃏 Drafting in progress</p>
+                            <a href="{% url 'game:game_board' game.id %}" class="btn-primary">
+                                Open draft board
+                            </a>
+                        </div>
                     {% else %}
                         Game summary
                     {% endif %}

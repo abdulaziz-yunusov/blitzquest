@@ -140,12 +140,23 @@
                     Determining current player.
                 </div>
                 <div class="dice-display-wrapper">
-                    <div id="dice-display" class="dice-display">
+                    <div id="dice-display" class="dice-display" data-has-value="">
+                        <div class="bq-dice">
+                        <ol class="bq-die-list even-roll" data-roll="1" id="bq-die-1" aria-label="Dice">
+                            <li class="bq-die-item" data-side="1"><span class="bq-dot"></span></li>
+                            <li class="bq-die-item" data-side="2"><span class="bq-dot"></span><span class="bq-dot"></span></li>
+                            <li class="bq-die-item" data-side="3"><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span></li>
+                            <li class="bq-die-item" data-side="4"><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span></li>
+                            <li class="bq-die-item" data-side="5"><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span></li>
+                            <li class="bq-die-item" data-side="6"><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span></li>
+                        </ol>
+                        </div>
+
+                        <div id="dice-text" class="dice-text">
                         Roll the dice when it is your turn.
+                        </div>
                     </div>
-                    <button type="button"
-                            id="roll-button"
-                            class="btn btn-primary">
+                    <button type="button" id="roll-button" class="btn btn-primary">
                         Roll dice
                     </button>
                 </div>
@@ -244,6 +255,23 @@
     </div>
   </div>
 </div>
+
+<!-- Draft modal -->
+<div id="draftModal" class="qmodal is-hidden" aria-hidden="true">
+  <div class="qmodal-backdrop"></div>
+  <div class="qmodal-card" role="dialog" aria-modal="true" aria-labelledby="draftTitle">
+    <div class="qmodal-header">
+      <h3 id="draftTitle">Draft Mode</h3>
+      <span id="draftSub" class="smodal-subtitle" style="margin-left:auto;"></span>
+    </div>
+    <div class="qmodal-body">
+      <div id="draftChoices" class="qchoices"></div>
+      <p id="draftFeedback" class="qfeedback"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Question modal -->
 <div id="questionModal" class="qmodal is-hidden" aria-hidden="true">
     <div class="qmodal-backdrop"></div>
 

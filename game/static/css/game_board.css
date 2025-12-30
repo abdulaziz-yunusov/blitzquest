@@ -372,6 +372,142 @@
     font-size: 0.85rem;
 }
 
+/* =========================
+   3D Dice (scoped for board)
+   ========================= */
+
+.dice-display{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.dice-text{
+  width: 100%;
+  text-align: center;
+}
+
+/* container provides perspective */
+.bq-dice{
+  display: grid;
+  place-items: center;
+  perspective: 700px;
+  width: 100%;
+}
+
+/* cube wrapper */
+.bq-die-list{
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  width: 72px;
+  height: 72px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  transform-style: preserve-3d;
+}
+
+/* transitions like your demo (odd/even) */
+.bq-die-list.even-roll{ transition: transform 1.5s ease-out; }
+.bq-die-list.odd-roll{  transition: transform 1.25s ease-out; }
+
+/* a single face */
+.bq-die-item{
+  grid-column: 1;
+  grid-row: 1;
+
+  display: grid;
+  grid-template-areas:
+    "one two three"
+    "four five six"
+    "seven eight nine";
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.25);
+
+  box-shadow:
+    inset -8px 8px 16px rgba(0,0,0,0.22),
+    inset 10px -6px 12px rgba(255,255,255,0.35),
+    0 14px 30px rgba(0,0,0,0.25);
+}
+
+/* pip */
+.bq-dot{
+  align-self: center;
+  justify-self: center;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #111827;
+  box-shadow: inset -2px 2px 4px rgba(0,0,0,0.45);
+}
+
+/* 🔧 FIX: reset grid position before face-specific rules */
+.bq-die-item .bq-dot{
+  grid-area: auto;
+}
+
+/* === Final rotations per roll value (copied logic from your demo, scaled for our cube) === */
+.bq-die-list.even-roll[data-roll="1"]{ transform: rotateX(360deg) rotateY(720deg) rotateZ(360deg); }
+.bq-die-list.even-roll[data-roll="2"]{ transform: rotateX(450deg) rotateY(720deg) rotateZ(360deg); }
+.bq-die-list.even-roll[data-roll="3"]{ transform: rotateX(360deg) rotateY(630deg) rotateZ(360deg); }
+.bq-die-list.even-roll[data-roll="4"]{ transform: rotateX(360deg) rotateY(810deg) rotateZ(360deg); }
+.bq-die-list.even-roll[data-roll="5"]{ transform: rotateX(270deg) rotateY(720deg) rotateZ(360deg); }
+.bq-die-list.even-roll[data-roll="6"]{ transform: rotateX(360deg) rotateY(900deg) rotateZ(360deg); }
+
+.bq-die-list.odd-roll[data-roll="1"]{ transform: rotateX(-360deg) rotateY(-720deg) rotateZ(-360deg); }
+.bq-die-list.odd-roll[data-roll="2"]{ transform: rotateX(-270deg) rotateY(-720deg) rotateZ(-360deg); }
+.bq-die-list.odd-roll[data-roll="3"]{ transform: rotateX(-360deg) rotateY(-810deg) rotateZ(-360deg); }
+.bq-die-list.odd-roll[data-roll="4"]{ transform: rotateX(-360deg) rotateY(-630deg) rotateZ(-360deg); }
+.bq-die-list.odd-roll[data-roll="5"]{ transform: rotateX(-450deg) rotateY(-720deg) rotateZ(-360deg); }
+.bq-die-list.odd-roll[data-roll="6"]{ transform: rotateX(-360deg) rotateY(-900deg) rotateZ(-360deg); }
+
+/* === 3D positioning of faces (translateZ must be half-ish of cube size) === */
+.bq-die-item[data-side="1"]{ transform: rotate3d(0, 0, 0, 90deg) translateZ(36px); }
+.bq-die-item[data-side="2"]{ transform: rotate3d(-1, 0, 0, 90deg) translateZ(36px); }
+.bq-die-item[data-side="3"]{ transform: rotate3d(0, 1, 0, 90deg) translateZ(36px); }
+.bq-die-item[data-side="4"]{ transform: rotate3d(0, -1, 0, 90deg) translateZ(36px); }
+.bq-die-item[data-side="5"]{ transform: rotate3d(1, 0, 0, 90deg) translateZ(36px); }
+.bq-die-item[data-side="6"]{ transform: rotate3d(1, 0, 0, 180deg) translateZ(36px); }
+
+/* pip layouts */
+.bq-die-item[data-side="1"] .bq-dot:nth-of-type(1){ grid-area: five; }
+
+.bq-die-item[data-side="2"] .bq-dot:nth-of-type(1){ grid-area: one; }
+.bq-die-item[data-side="2"] .bq-dot:nth-of-type(2){ grid-area: nine; }
+
+.bq-die-item[data-side="3"] .bq-dot:nth-of-type(1){ grid-area: one; }
+.bq-die-item[data-side="3"] .bq-dot:nth-of-type(2){ grid-area: five; }
+.bq-die-item[data-side="3"] .bq-dot:nth-of-type(3){ grid-area: nine; }
+
+.bq-die-item[data-side="4"] .bq-dot:nth-of-type(1){ grid-area: one; }
+.bq-die-item[data-side="4"] .bq-dot:nth-of-type(2){ grid-area: three; }
+.bq-die-item[data-side="4"] .bq-dot:nth-of-type(3){ grid-area: seven; }
+.bq-die-item[data-side="4"] .bq-dot:nth-of-type(4){ grid-area: nine; }
+
+.bq-die-item[data-side="5"] .bq-dot:nth-of-type(1){ grid-area: one; }
+.bq-die-item[data-side="5"] .bq-dot:nth-of-type(2){ grid-area: three; }
+.bq-die-item[data-side="5"] .bq-dot:nth-of-type(3){ grid-area: five; }
+.bq-die-item[data-side="5"] .bq-dot:nth-of-type(4){ grid-area: seven; }
+.bq-die-item[data-side="5"] .bq-dot:nth-of-type(5){ grid-area: nine; }
+
+.bq-die-item[data-side="6"] .bq-dot:nth-of-type(1){ grid-area: one; }
+.bq-die-item[data-side="6"] .bq-dot:nth-of-type(2){ grid-area: three; }
+.bq-die-item[data-side="6"] .bq-dot:nth-of-type(3){ grid-area: four; }
+.bq-die-item[data-side="6"] .bq-dot:nth-of-type(4){ grid-area: six; }
+.bq-die-item[data-side="6"] .bq-dot:nth-of-type(5){ grid-area: seven; }
+.bq-die-item[data-side="6"] .bq-dot:nth-of-type(6){ grid-area: nine; }
+
+
 /* players list */
 
 .sidebar-player-count {
@@ -582,6 +718,8 @@
   justify-content: flex-end;
   gap: 10px;
 }
+
+
 /* --- Question modal --- */
 .qmodal.is-hidden { display: none; }
 
@@ -760,6 +898,132 @@
   color: #fde68a;
   font-size: 0.85rem;
 }
+
+/* --- Draft modal --- */
+#draftModal .qmodal-card {
+    max-width: 520px;
+    background: #0f172a; /* dark slate */
+    border: 2px solid #6366f1; /* indigo */
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.35);
+}
+
+#draftModal .qmodal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+#draftModal .qmodal-header h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #e5e7eb;
+}
+
+#draftSub {
+    font-size: 13px;
+    color: #a5b4fc;
+    opacity: 0.9;
+}
+
+#draftModal .qmodal-body {
+    padding-top: 16px;
+}
+
+/* Draft choice buttons */
+#draftChoices {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+#draftChoices .qchoice {
+    background: linear-gradient(180deg, #1e293b, #020617);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 14px 10px;
+    color: #e5e7eb;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+#draftChoices .qchoice:hover {
+    transform: translateY(-2px);
+    border-color: #818cf8;
+    box-shadow: 0 6px 20px rgba(129, 140, 248, 0.35);
+}
+
+#draftChoices .qchoice:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Feedback text */
+#draftFeedback {
+    margin-top: 12px;
+    min-height: 18px;
+    font-size: 13px;
+    color: #f87171; /* red for errors */
+}
+
+/* ===== Draft card images ===== */
+
+#draftChoices .draft-choice{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+}
+
+#draftChoices .draft-choice-img{
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
+    object-fit: cover;
+    /* transition: transform 0.15s ease, box-shadow 0.15s ease; */
+}
+
+/* hover interaction */
+#draftChoices .draft-choice-img{
+    position: relative;
+}
+
+#draftChoices .draft-choice:hover .draft-choice-img::after{
+    content: "";
+    position: absolute;
+    inset: -10px;
+    border-radius: 16px;
+    box-shadow: 0 0 24px rgba(99,102,241,0.55);
+    pointer-events: none;
+}
+
+/* title under image */
+#draftChoices .draft-choice span{
+    font-size: 13px;
+    font-weight: 600;
+    color: #e5e7eb;
+}
+
+/* disabled state */
+#draftChoices .draft-choice:disabled .draft-choice-img{
+    opacity: 0.5;
+    transform: none;
+    box-shadow: none;
+}
+
+
+/* Mobile fallback */
+@media (max-width: 640px) {
+    #draftChoices {
+        grid-template-columns: 1fr;
+    }
+}
+
 
 /* --- Duel modal --- */
 .dmodal.is-hidden { display: none; }

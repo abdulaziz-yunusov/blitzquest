@@ -57,6 +57,28 @@ async function safeJson(res) {
         return null;
     }
 }
+
+function getDiceEls() {
+  return {
+    die: document.getElementById("bq-die-1"),
+    diceText: document.getElementById("dice-text"),
+    diceDisplay: document.getElementById("dice-display"),
+  };
+}
+
+function toggleDiceClasses(die) {
+  if (!die) return;
+  die.classList.toggle("odd-roll");
+  die.classList.toggle("even-roll");
+}
+
+function animateDieTo(value) {
+  const { die } = getDiceEls();
+  if (!die) return;
+  toggleDiceClasses(die);
+  die.dataset.roll = String(value);
+}
+
 /**
  * Applies server response after buy/sell/close.
  * Expected shape: { game_state: ... }
@@ -491,6 +513,110 @@ async function shopClose() {
         console.error(err);
         if (feedback) feedback.textContent = "Network error while closing shop.";
     }
+}
+
+
+// -----------------------------
+// Draft Mode UI + actions
+// -----------------------------
+
+function setDraftModalVisible(visible) {
+  const modal = document.getElementById("draftModal");
+  if (!modal) return;
+  if (visible) {
+    modal.classList.remove("is-hidden");
+    modal.setAttribute("aria-hidden", "false");
+  } else {
+    modal.classList.add("is-hidden");
+    modal.setAttribute("aria-hidden", "true");
+  }
+}
+
+function renderDraftUI(state) {
+  // state.draft expected from backend to_public_state()
+  const draft = state && state.draft ? state.draft : null;
+
+  // If not drafting, hide modal
+  if (!draft || !draft.active) {
+    setDraftModalVisible(false);
+    return;
+  }
+
+  setDraftModalVisible(true);
+
+  const sub = document.getElementById("draftSub");
+  const choicesEl = document.getElementById("draftChoices");
+  const feedbackEl = document.getElementById("draftFeedback");
+
+  if (sub) {
+    sub.textContent = `Pick ${Math.min(draft.picks_done + 1, draft.max_picks)} of ${draft.max_picks}`;
+  }
+
+  if (feedbackEl) feedbackEl.textContent = "";
+
+  if (!choicesEl) return;
+
+  const options = Array.isArray(draft.options) ? draft.options : [];
+  if (options.length === 0) {
+    choicesEl.innerHTML = `<div class="qchoice disabled">Waiting for opponents...</div>`;
+    return;
+  }
+
+  // Build 3 buttons (options are card_type IDs)
+  choicesEl.innerHTML = options.map((opt) => `
+    <button class="qchoice draft-choice"
+            type="button"
+            data-card-type="${opt.id}">
+        <img class="draft-choice-img" src="${opt.image_url}" alt="">
+        <span>${opt.title}</span>
+    </button>
+    `).join("");
+
+  // Click handlers
+  choicesEl.querySelectorAll("button[data-card-type]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const cardTypeId = btn.getAttribute("data-card-type");
+      const gameId = window.GAME_ID;
+
+      // Disable all choices while sending
+      choicesEl.querySelectorAll("button").forEach((b) => (b.disabled = true));
+
+      try {
+        await draftPick(gameId, cardTypeId);
+        // After pick, refresh state immediately so next options show
+        if (typeof fetchGameState === "function") {
+          await fetchGameState();
+        }
+      } catch (err) {
+        if (feedbackEl) feedbackEl.textContent = err?.message || "Draft pick failed.";
+        // Re-enable choices
+        choicesEl.querySelectorAll("button").forEach((b) => (b.disabled = false));
+      }
+    });
+  });
+}
+
+async function draftPick(gameId, cardTypeId) {
+  const resp = await fetch(`/games/${gameId}/draft/pick/`, {
+    method: "POST",
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+      "X-CSRFToken": getCookie("csrftoken") || "",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ card_type_id: cardTypeId }),
+  });
+
+  if (!resp.ok) {
+    let msg = `Error: ${resp.status}`;
+    try {
+      const data = await resp.json();
+      if (data && (data.detail || data.error)) msg = data.detail || data.error;
+    } catch (_) {}
+    throw new Error(msg);
+  }
+
+  return resp.json().catch(() => ({}));
 }
 
 // ============================
@@ -947,7 +1073,7 @@ function updatePlayersUI(state) {
 function updateDiceUI(state) {
     const labelEl = document.getElementById("current-turn-label");
     const rollButton = document.getElementById("roll-button");
-    const diceDisplay = document.getElementById("dice-display");
+    const diceText = document.getElementById("dice-text");
 
     if (!state) return;
 
@@ -979,11 +1105,12 @@ function updateDiceUI(state) {
         if (labelEl) labelEl.textContent = "Game finished.";
     }
 
-    if (diceDisplay && !diceDisplay.dataset.hasValue) {
-        const currentName = current && current.username ? current.username : null;
-        diceDisplay.textContent = isYourTurn
-            ? "It is your turn. Roll the dice."
-            : (currentName ? `Waiting for ${currentName} to roll.` : "Waiting for the current player to roll.");
+    const diceDisplay = document.getElementById("dice-display");
+    if (diceText && (!diceDisplay || !diceDisplay.dataset.hasValue)) {
+      const currentName = current && current.username ? current.username : null;
+      diceText.textContent = isYourTurn
+        ? "It is your turn. Roll the dice."
+        : (currentName ? `Waiting for ${currentName} to roll.` : "Waiting for the current player to roll.");
     }
 }
 
@@ -1107,6 +1234,7 @@ async function fetchGameState(gameId) {
         renderPlayerTokens(data);
         renderInventoryUI(data);
         renderQuestionUI(data);
+        renderDraftUI(data);
 
 
         if (data.pending_duel) {
@@ -1142,7 +1270,23 @@ async function fetchGameState(gameId) {
 }
 
 // ---------- roll ----------
+function startDiceShuffle() {
+  const { die } = getDiceEls();
+  if (!die) return null;
 
+  let alive = true;
+  const interval = setInterval(() => {
+    if (!alive) return;
+    const v = 1 + Math.floor(Math.random() * 6);
+    toggleDiceClasses(die);
+    die.dataset.roll = String(v);
+  }, 90);
+
+  return () => {
+    alive = false;
+    clearInterval(interval);
+  };
+}
 async function handleRollClick(e) {
     e.preventDefault();
     const gameId = window.GAME_ID;
@@ -1150,13 +1294,14 @@ async function handleRollClick(e) {
 
     const rollButton = document.getElementById("roll-button");
     const diceDisplay = document.getElementById("dice-display");
+    const diceText = document.getElementById("dice-text");
     const logEl = document.getElementById("dice-log");
 
     if (rollButton) rollButton.disabled = true;
-    if (diceDisplay) {
-        diceDisplay.textContent = "Rolling.";
-        diceDisplay.dataset.hasValue = "1";
-    }
+    if (diceDisplay) diceDisplay.dataset.hasValue = "1";
+    if (diceText) diceText.textContent = "Rolling...";
+    const stopShuffle = startDiceShuffle();
+
 
     try {
         const resp = await fetch(`/games/${gameId}/roll/`, {
@@ -1176,6 +1321,7 @@ async function handleRollClick(e) {
             } catch (_) {}
             if (diceDisplay) diceDisplay.textContent = msg;
             fetchGameState(gameId);
+            if (typeof stopShuffle === "function") stopShuffle();
             return;
         }
 
@@ -1185,8 +1331,12 @@ async function handleRollClick(e) {
         const move = result.move || {};
         const state = data.game_state;
 
-        if (diceDisplay && typeof dice !== "undefined") {
-            diceDisplay.textContent = `You rolled ${dice}.`;
+        if (typeof stopShuffle === "function") stopShuffle();
+
+        if (typeof dice !== "undefined") {
+          // animate to the final server value
+          animateDieTo(Number(dice));
+          if (diceText) diceText.textContent = `You rolled ${dice}.`;
         }
 
         if (logEl && move) {
@@ -1224,6 +1374,7 @@ async function handleRollClick(e) {
     } catch (e) {
         console.error("roll error:", e);
         const diceDisplay = document.getElementById("dice-display");
+        if (typeof stopShuffle === "function") stopShuffle();
         if (diceDisplay) diceDisplay.textContent = "Error while rolling.";
     }
 }

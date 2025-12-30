@@ -12,11 +12,13 @@ User = get_user_model()
 class Game(models.Model):
     class Status(models.TextChoices):
         WAITING = "waiting", "Waiting for players"
+        DRAFTING = "drafting", "Drafting"
         ACTIVE = "active", "Active"
         FINISHED = "finished", "Finished"
 
     class Mode(models.TextChoices):
         FINISH = "finish", "Finish Line"
+        DRAFT = "draft", "Draft Mode"
         SURVIVAL = "survival", "Survival"
 
     code = models.CharField(
@@ -161,7 +163,7 @@ class Game(models.Model):
 
     def clean(self):
         # Survival is always 35 tiles
-        if self.mode == self.Mode.SURVIVAL:
+        if self.mode in (self.Mode.SURVIVAL, self.Mode.DRAFT):
             self.board_length = 35
 
     def save(self, *args, **kwargs):
@@ -250,7 +252,7 @@ class Game(models.Model):
         return False
 
 
-    def to_public_state(self, for_user=None):
+    def to_public_state(self, for_user=None, viewer=None):
         """
         JSON-serializable representation of the game state.
         """
@@ -358,6 +360,8 @@ class Game(models.Model):
             "pending_shop_active": shop_active,
             "pending_shop_for_player_id": shop_for_player_id,
         }
+
+        
         
         # ----------------------------
         # Pending Duel (Prediction Duel)
@@ -424,6 +428,18 @@ class Game(models.Model):
             ]
             payload["you_shield_points"] = getattr(me, "shield_points", 0)
             payload["you_extra_rolls"] = getattr(me, "extra_rolls", 0)
+
+        if self.mode == self.Mode.DRAFT and self.status == self.Status.DRAFTING:
+            payload["draft"] = {
+                "active": True,
+                "picks_done": int(getattr(me, "draft_picks", 0)) if me else 0,
+                "options": list(getattr(me, "draft_options", []) or []) if me else [],
+                "max_picks": 3,
+            }
+        else:
+            payload["draft"] = {"active": False}
+
+
 
         if self.status == "finished" or self.winner_id is not None:
             payload["leaderboard"] = self.build_leaderboard()
@@ -897,6 +913,9 @@ class Game(models.Model):
         }
 
     def generate_random_board(self):
+        if self.mode in (self.Mode.SURVIVAL, self.Mode.DRAFT):
+            self.board_length = 35
+        
         length = max(self.board_length or 0, 8)
         if length != self.board_length:
             self.board_length = length
@@ -919,30 +938,30 @@ class Game(models.Model):
         middle_positions = range(1, length - 1)
 
         default_pool = [
-            TT.SAFE,
-            TT.TRAP,
-            TT.HEAL,
-            TT.BONUS,
-            TT.QUESTION,
-            TT.WARP,
-            TT.MASS_WARP,
-            TT.DUEL,
-            TT.SHOP,
+            TT.SAFE, TT.TRAP, TT.HEAL, TT.BONUS,
+            TT.QUESTION, TT.WARP, TT.MASS_WARP, TT.DUEL, TT.SHOP,
         ]
+        
         selected = [
             t for t in (self.enabled_tiles or [])
             if t not in (TT.START, TT.FINISH) and t in dict(TT.choices)
         ]
+        
+        if self.mode == self.Mode.DRAFT:
+            selected = [t for t in selected if t != TT.BONUS]
+            if TT.BONUS in default_pool:
+                default_pool = [t for t in default_pool if t != TT.BONUS]
+
         if TT.SAFE not in selected:
             selected.append(TT.SAFE)
 
         tile_type_pool = selected or default_pool
 
         default_weights = {
-            TT.SAFE: 0,
+            TT.SAFE: 1,
             TT.TRAP: 3,
             TT.HEAL: 3,
-            TT.BONUS: 3,
+            TT.BONUS: 0 if self.mode == self.Mode.DRAFT else 3,
             TT.QUESTION: 2,
             TT.WARP: 1,
             TT.MASS_WARP: 1,
@@ -1036,6 +1055,16 @@ class PlayerInGame(models.Model):
 
     turn_order = models.PositiveSmallIntegerField(
         help_text="Order of turns within the game (0-based).",
+    )
+
+    draft_picks = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="How many draft picks this player has completed (Draft Mode only).",
+    )
+    draft_options = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Current draft option card_type IDs offered to this player (Draft Mode only).",
     )
 
     hp = models.PositiveSmallIntegerField(default=3)

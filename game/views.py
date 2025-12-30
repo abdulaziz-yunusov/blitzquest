@@ -9,8 +9,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login as auth_login
 from django.http import JsonResponse
-from django.views.decorators.http import require_GET
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
+from django.templatetags.static import static
+
 from django.db import transaction
 from django.http import HttpResponse
 
@@ -54,6 +55,10 @@ def _tile_weights_for(game: Game):
 
     if game.mode != Game.Mode.SURVIVAL:
         return weights
+    
+    if game.mode == Game.Mode.DRAFT:
+        weights.pop(BoardTile.TileType.BONUS, None)
+        return weights
 
     diff = game.survival_difficulty
 
@@ -72,6 +77,141 @@ def _tile_weights_for(game: Game):
 
     return weights
 
+def enrich_draft_options(state: dict) -> dict:
+    """
+    Converts draft.options from [card_type_id, ...] into
+    [{id, title, image_url}, ...] so the frontend can render images + names.
+    """
+    if not isinstance(state, dict):
+        return state
+
+    draft = state.get("draft")
+    if not (draft and isinstance(draft, dict) and draft.get("active")):
+        return state
+
+    options = draft.get("options")
+    if not isinstance(options, list) or not options:
+        return state
+
+    # If already enriched, do nothing
+    if isinstance(options[0], dict) and "image_url" in options[0]:
+        return state
+
+    # options are SupportCardType IDs (ints)
+    ids = []
+    for x in options:
+        try:
+            ids.append(int(x))
+        except Exception:
+            pass
+
+    types = SupportCardType.objects.filter(id__in=ids).only("id", "code", "name")
+    by_id = {t.id: t for t in types}
+
+    # Map SupportCardType.code -> your static image files
+    CODE_TO_IMAGE = {
+        "bonus_coin": "images/coin.png",
+        "heal": "images/heal.png",
+        "move_extra": "images/move.png",
+        "reroll": "images/reroll.png",
+        "shield": "images/shield.png",
+        "swap_position": "images/swap.png",
+        "change_question": "images/question.png", 
+    }
+
+    enriched = []
+    for cid in ids:
+        ct = by_id.get(cid)
+        if ct:
+            img = CODE_TO_IMAGE.get(ct.code, "images/question.png")
+            title = ct.name or ct.code.replace("_", " ").title()
+        else:
+            img = "images/question.png"
+            title = f"Card #{cid}"
+
+        enriched.append({
+            "id": cid,
+            "title": title,
+            "image_url": static(img),
+        })
+
+    draft["options"] = enriched
+    state["draft"] = draft
+    return state
+
+def deal_draft_options(game, player, k=3):
+    from .models import SupportCardType, SupportCardInstance
+
+    owned_type_ids = set(
+        SupportCardInstance.objects.filter(owner=player).values_list("card_type_id", flat=True)
+    )
+
+    all_ids = list(SupportCardType.objects.values_list("id", flat=True))
+
+    pool = [cid for cid in all_ids if cid not in owned_type_ids]
+    if len(pool) < k:
+        pool = all_ids
+
+    return random.sample(pool, min(k, len(pool)))
+
+@login_required
+@require_POST
+def draft_pick(request, game_id):
+    from .models import Game, SupportCardType, SupportCardInstance
+
+    game = Game.objects.select_related().get(id=game_id)
+
+    if game.mode != Game.Mode.DRAFT:
+        return JsonResponse({"detail": "Not a Draft Mode game."}, status=400)
+    if game.status != Game.Status.DRAFTING:
+        return JsonResponse({"detail": "Drafting is not active."}, status=400)
+
+    # Find player record for current user
+    player = game.players.filter(user=request.user).first()
+    if not player:
+        return JsonResponse({"detail": "You are not in this game."}, status=403)
+
+    if player.draft_picks >= 3:
+        return JsonResponse({"detail": "You already finished drafting."}, status=400)
+
+    # Read JSON { "card_type_id": ... }
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+        card_type_id = int(data.get("card_type_id"))
+    except Exception:
+        return JsonResponse({"detail": "Invalid payload."}, status=400)
+
+    # Validate choice exists in options
+    options = player.draft_options or []
+    if card_type_id not in options:
+        return JsonResponse({"detail": "Chosen card is not in your current draft options."}, status=400)
+
+    # Create card instance in inventory
+    card_type = SupportCardType.objects.get(id=card_type_id)
+    SupportCardInstance.objects.create(owner=player, card_type=card_type)
+
+    # Progress draft
+    player.draft_picks += 1
+
+    if player.draft_picks < 3:
+        player.draft_options = deal_draft_options(game, player, k=3)
+    else:
+        player.draft_options = []
+
+    player.save()
+
+    # If all players finished (3 picks), start game
+    all_done = all(p.draft_picks >= 3 for p in game.players.all())
+    if all_done:
+        game.status = Game.Status.ACTIVE
+        game.save()
+
+    return JsonResponse({
+        "ok": True,
+        "picks_done": player.draft_picks,
+        "game_status": game.status,
+    })
+
 def create_default_board_for_game(game: Game, enabled_tiles=None):
     # ✅ IMPORTANT: clear old tiles
     game.tiles.all().delete()
@@ -81,6 +221,10 @@ def create_default_board_for_game(game: Game, enabled_tiles=None):
         game.board_length = SURVIVAL_LEN
         game.save(update_fields=["board_length"])
         board_len = SURVIVAL_LEN
+    elif game.mode == Game.Mode.DRAFT:
+        game.board_length = 35
+        game.save(update_fields=["board_length"])
+        board_len = 35
     else:
         board_len = int(game.board_length or 36)
 
@@ -96,6 +240,9 @@ def create_default_board_for_game(game: Game, enabled_tiles=None):
     # never randomly generate portal
     weights_map.pop(BoardTile.TileType.PORTAL, None)
 
+    if game.mode == Game.Mode.DRAFT:
+        weights_map.pop(BoardTile.TileType.BONUS, None)
+
     allowed = [t for t in weights_map.keys() if (t in enabled_tiles or t == BoardTile.TileType.SAFE)]
     weights = [weights_map[t] for t in allowed]
 
@@ -107,15 +254,14 @@ def create_default_board_for_game(game: Game, enabled_tiles=None):
             tiles.append(BoardTile(game=game, position=pos, tile_type=BoardTile.TileType.START, label="START"))
             continue
 
-        # Finish Line end
-        if game.mode == Game.Mode.FINISH and pos == last_index:
-            tiles.append(BoardTile(game=game, position=pos, tile_type=BoardTile.TileType.FINISH, label="FINISH"))
+        # Last tile rules
+        if pos == last_index:
+            if game.mode == Game.Mode.SURVIVAL:
+                tiles.append(BoardTile(game=game, position=pos, tile_type=BoardTile.TileType.PORTAL, label="PORTAL"))
+            else:
+                tiles.append(BoardTile(game=game, position=pos, tile_type=BoardTile.TileType.FINISH, label="FINISH"))
             continue
 
-        # Survival portal at last tile
-        if game.mode == Game.Mode.SURVIVAL and pos == last_index:
-            tiles.append(BoardTile(game=game, position=pos, tile_type=BoardTile.TileType.PORTAL, label="PORTAL"))
-            continue
 
         tile_type = random.choices(allowed, weights=weights, k=1)[0]
 
@@ -258,7 +404,7 @@ def game_detail(request, game_id: int):
     game = get_object_or_404(Game, id=game_id)
     players = game.players.select_related("user").order_by("turn_order")
     tiles = game.tiles.order_by("position")
-
+    
     if not players.filter(user=request.user).exists():
         if game.host != request.user:
             messages.error(request, "You are not a player in this game.")
@@ -356,6 +502,7 @@ def seed_support_cards():
 
 
 @login_required
+@require_POST
 def game_start(request, game_id: int):
     game = get_object_or_404(Game, id=game_id)
 
@@ -371,18 +518,43 @@ def game_start(request, game_id: int):
         messages.error(request, "Need at least 2 players to start the game.")
         return redirect("game:game_detail", game_id=game.id)
 
+    # 1) Ensure support cards exist
     seed_support_cards()
-    if game.mode == Game.Mode.SURVIVAL:
+
+    # 2) Generate the board (same rule you had)
+    if game.mode in (Game.Mode.SURVIVAL, Game.Mode.DRAFT):
         create_default_board_for_game(game, enabled_tiles=game.enabled_tiles)
     else:
         game.generate_random_board()
 
-    game.current_turn_index = 0
-    game.status = Game.Status.ACTIVE
-    game.save(update_fields=["current_turn_index", "status"])
+    # 3) Start based on mode (Draft stays DRAFTING; others become ACTIVE)
+    if game.mode == Game.Mode.DRAFT:
+        # Draft start: give choices, reset picks, reset positions
+        game.status = Game.Status.DRAFTING
+
+        for player in game.players.all():
+            player.draft_options = deal_draft_options(game, player, k=3)
+            player.draft_picks = 0
+            player.position = 0
+            player.save()
+
+        # Do NOT set ACTIVE here
+        game.save(update_fields=["status"])
+
+    else:
+        # Standard start for Finish Line / Survival
+        game.status = Game.Status.ACTIVE
+        game.current_turn_index = 0
+
+        for player in game.players.all():
+            player.position = 0
+            player.save()
+
+        game.save(update_fields=["status", "current_turn_index"])
 
     messages.success(request, "Game started! Board generated.")
     return redirect("game:game_board", game_id=game.id)
+
 
 @login_required
 @require_POST
@@ -430,6 +602,7 @@ def game_state(request, game_id: int):
         return JsonResponse({"detail": "Forbidden"}, status=403)
 
     state = game.to_public_state(for_user=request.user)
+    state = enrich_draft_options(state)
     return JsonResponse(state)
 
 
@@ -678,11 +851,12 @@ def game_board(request, game_id: int):
         messages.error(request, "You are not a player in this game.")
         return redirect("game:game_list")
 
-    if game.status != Game.Status.ACTIVE:
+    if game.status not in (Game.Status.ACTIVE, Game.Status.DRAFTING):
         messages.info(request, "Game is not active yet.")
         return redirect("game:game_detail", game_id=game.id)
 
     state = game.to_public_state(for_user=request.user)
+    state = enrich_draft_options(state)
 
     tiles_qs = game.tiles.order_by("position")
     players_ordered = players_qs.order_by("turn_order")

@@ -44,7 +44,7 @@ class GameCreateForm(forms.ModelForm):
         mode = self.cleaned_data.get("mode") or Game.Mode.FINISH
         bl = int(self.cleaned_data.get("board_length") or 35)
 
-        if mode == Game.Mode.SURVIVAL:
+        if mode == [Game.Mode.SURVIVAL, Game.Mode.DRAFT]:
             return 35  # force
 
         # Finish Line: allow configurable size
