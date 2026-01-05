@@ -58,33 +58,6 @@ async function safeJson(res) {
     }
 }
 
-function nextFrame() {
-    return new Promise((resolve) => requestAnimationFrame(() => resolve()));
-}
-
-function waitForTransformTransition(el, ms) {
-    return new Promise((resolve) => {
-        let done = false;
-
-        const finish = () => {
-            if (done) return;
-            done = true;
-            el.removeEventListener("transitionend", onEnd);
-            clearTimeout(timer);
-            resolve();
-        };
-
-        const onEnd = (e) => {
-            if (e.propertyName === "transform") finish();
-        };
-
-        // Fallback in case transitionend doesn't fire (tab inactive, etc.)
-        const timer = setTimeout(finish, ms + 80);
-
-        el.addEventListener("transitionend", onEnd, { once: true });
-    });
-}
-
 function getDiceEls() {
     return {
         die: document.getElementById("bq-die-1"),
@@ -941,10 +914,6 @@ function updateBoardUI(state) {
     if (!state) return;
     const container = document.getElementById("board-tiles");
     if (!container) return;
-    const tokenLayer = document.getElementById("token-layer");
-    if (tokenLayer && tokenLayer.parentNode === container) {
-        container.removeChild(tokenLayer);
-    }
 
     const tilesRaw = Array.isArray(state.tiles) ? state.tiles : [];
     const playersRaw = Array.isArray(state.players) ? state.players : [];
@@ -995,8 +964,8 @@ function updateBoardUI(state) {
                 case "mass_warp": label = "Mass Warp"; break;
                 case "duel": label = "Duel"; break;
                 case "shop": label = "Shop"; break;
-                case "portal": label = "Portal"; break;
                 default: label = ""; break;
+                case "portal": label = "Portal"; break;
             }
         }
 
@@ -1025,7 +994,6 @@ function updateBoardUI(state) {
     }).join("");
 
     container.innerHTML = html || "<div>No tiles.</div>";
-    if (tokenLayer) container.appendChild(tokenLayer);
 }
 
 // ---------- UI: players panel ----------
@@ -1252,7 +1220,6 @@ function renderInventoryUI(state) {
 // ---------- fetch state ----------
 
 async function fetchGameState(gameId) {
-    if (BQ_IS_ANIMATING) return;
     try {
         const resp = await fetch(`/games/${gameId}/state/`, {
             headers: { "X-Requested-With": "XMLHttpRequest" }
@@ -1260,7 +1227,6 @@ async function fetchGameState(gameId) {
         if (!resp.ok) return;
 
         const data = await resp.json();
-        window.GAME_STATE = data;
 
         updateBoardUI(data);
         updatePlayersUI(data);
@@ -1269,6 +1235,7 @@ async function fetchGameState(gameId) {
         renderInventoryUI(data);
         renderQuestionUI(data);
         renderDraftUI(data);
+
 
         if (data.pending_duel) {
             showDuelModal();
@@ -1333,11 +1300,8 @@ async function handleRollClick(e) {
     if (rollButton) rollButton.disabled = true;
     if (diceDisplay) diceDisplay.dataset.hasValue = "1";
     if (diceText) diceText.textContent = "Rolling...";
-
     const stopShuffle = startDiceShuffle();
 
-    let state = null;
-    let move = null;
 
     try {
         const resp = await fetch(`/games/${gameId}/roll/`, {
@@ -1364,20 +1328,20 @@ async function handleRollClick(e) {
         const data = await resp.json();
         const result = data.result || data.action || {};
         const dice = result.dice;
-
-        move = result.move || {};
-        state = data.game_state || null;
+        const move = result.move || {};
+        const state = data.game_state;
 
         if (typeof stopShuffle === "function") stopShuffle();
 
         if (typeof dice !== "undefined") {
+            // animate to the final server value
             animateDieTo(Number(dice));
             if (diceText) diceText.textContent = `You rolled ${dice}.`;
         }
 
         if (logEl && move) {
-            const from = Number(move.from_position);
-            const to = Number(move.to_position);
+            const from = move.from_position;
+            const to = move.to_position;
             const tileType = move.landed_tile_type;
             const tileEffect = move.tile_effect || {};
 
@@ -1399,72 +1363,14 @@ async function handleRollClick(e) {
             logEl.prepend(p);
         }
 
-        if (!state) return;
-
-        window.GAME_STATE = state;
-
-        updateBoardUI(state);
-
-        document.body.offsetHeight;
-
-        const fromPos = Number(move?.from_position);
-        const toPos = Number(move?.to_position);
-        const pid = state.you_player_id;
-
-        if (
-            pid &&
-            Number.isFinite(fromPos) &&
-            Number.isFinite(toPos) &&
-            typeof animateStepMove === "function"
-        ) {
-            snapAllTokensToState(state, false);
-            const me = state.players.find(p => p.id === pid);
-            if (me) {
-                const token = getOrCreateToken(me, state);
-                const startTile = document.querySelector(`.board-tile[data-position="${fromPos}"]`);
-                const board = document.getElementById("board-tiles");
-
-                if (token && startTile && board) {
-                    // compute start coords first
-                    const r = getTileRectRelativeToBoard(startTile, board);
-                    const x = r.x + r.w / 2 - 13;
-                    const y = r.y + r.h / 2 - 13;
-
-                    // snap instantly to the FROM tile (no transition)
-                    token.classList.remove("token-anim");
-                    token.style.transitionDuration = "0ms";
-                    token.style.transform =
-                        `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) translateY(var(--stack-offset, 0))`;
-
-                    // force a paint so the browser commits the start position
-                    await nextFrame();
-
-                    // now allow animations again
-                    token.style.transitionDuration = "";
-                }
-            }
-
-
-
-            BQ_IS_ANIMATING = true;
-            try {
-                await nextFrame();
-                await animateStepMove(state, pid, fromPos, toPos, 220);
-            } finally {
-                BQ_IS_ANIMATING = false;
-            }
+        if (state) {
+            updateBoardUI(state);
+            updatePlayersUI(state);
+            updateDiceUI(state);
+            renderPlayerTokens(state);
+            renderQuestionUI(state);
+            renderInventoryUI(state);
         }
-
-        // Final UI updates
-        updatePlayersUI(state);
-        updateDiceUI(state);
-
-        // Ensure everyone is exactly where they belong (corrects any animation drift)
-        snapAllTokensToState(state, false);
-
-        renderQuestionUI(state);
-        renderInventoryUI(state);
-
     } catch (e) {
         console.error("roll error:", e);
         const diceDisplay = document.getElementById("dice-display");
@@ -1474,198 +1380,6 @@ async function handleRollClick(e) {
 }
 
 // ---------- tokens ----------
-
-let BQ_IS_ANIMATING = false;
-let BQ_TOKEN_LAYER = null;
-let BQ_TOKEN_ELEMS = new Map(); // playerId -> HTMLElement
-let BQ_LAST_POSITIONS = new Map(); // playerId -> number
-
-function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function ensureTokenLayer() {
-    if (BQ_TOKEN_LAYER && document.body.contains(BQ_TOKEN_LAYER)) return BQ_TOKEN_LAYER;
-
-    const board = document.getElementById("board-tiles");
-    if (!board) return null;
-
-    let layer = document.getElementById("token-layer");
-    if (!layer) {
-        layer = document.createElement("div");
-        layer.id = "token-layer";
-        layer.className = "token-layer";
-        board.appendChild(layer);
-    }
-    BQ_TOKEN_LAYER = layer;
-    return layer;
-}
-
-function getTileRectRelativeToBoard(tileEl, boardEl) {
-    const t = tileEl.getBoundingClientRect();
-    const b = boardEl.getBoundingClientRect();
-    return { x: t.left - b.left, y: t.top - b.top, w: t.width, h: t.height };
-}
-
-function getTokenOffset(idx) {
-    // Small offsets so multiple players on same tile don't overlap.
-    const offsets = [
-        { dx: 0, dy: 0 },
-        { dx: 12, dy: -6 },
-        { dx: -12, dy: -6 },
-        { dx: 12, dy: 10 },
-        { dx: -12, dy: 10 },
-        { dx: 0, dy: -14 },
-    ];
-    return offsets[idx % offsets.length];
-}
-
-function setTokenPosition(tokenEl, x, y, animate = true) {
-    if (!tokenEl) return;
-    tokenEl.classList.toggle("token-anim", !!animate);
-    tokenEl.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) translateY(var(--stack-offset, 0))`;
-}
-
-function getOrCreateToken(player, gameState) {
-    const layer = ensureTokenLayer();
-    if (!layer) return null;
-
-    const id = String(player.id);
-    let el = BQ_TOKEN_ELEMS.get(id);
-
-    if (!el || !document.body.contains(el)) {
-        el = document.createElement("div");
-        el.className = "player-token player-token-abs";
-        el.dataset.playerId = id;
-        el.textContent = getPlayerInitials(player);
-        layer.appendChild(el);
-        BQ_TOKEN_ELEMS.set(id, el);
-    }
-
-    el.classList.toggle(
-        "player-token-current",
-        !!(gameState.current_player_id && String(gameState.current_player_id) === id)
-    );
-    el.classList.toggle("player-token-you", !!player.is_you);
-    el.classList.toggle("player-token-dead", player.is_alive === false);
-
-    return el;
-}
-
-function computeTileOccupancy(players) {
-    const byPos = {};
-    players.forEach((p) => {
-        const pos = typeof p.position === "number" ? p.position : 0;
-        if (!byPos[pos]) byPos[pos] = [];
-        byPos[pos].push(p);
-    });
-    return byPos;
-}
-
-function snapAllTokensToState(gameState, animate = false) {
-    if (!gameState || !Array.isArray(gameState.players)) return;
-
-    const board = document.getElementById("board-tiles");
-    if (!board) return;
-
-    ensureTokenLayer();
-
-    // Dedup players
-    const seen = new Set();
-    const players = [];
-    for (const p of gameState.players) {
-        if (!seen.has(p.id)) {
-            seen.add(p.id);
-            players.push(p);
-        }
-    }
-
-    const byPos = computeTileOccupancy(players);
-
-    players.forEach((p) => {
-        const pos = typeof p.position === "number" ? p.position : 0;
-        const tile = document.querySelector(`.board-tile[data-position="${pos}"]`);
-        if (!tile) return;
-        if (tile.classList.contains("board-tile-portal")) return;
-
-        const token = getOrCreateToken(p, gameState);
-        if (!token) return;
-
-        const idx = (byPos[pos] || []).findIndex((pp) => pp.id === p.id);
-        const off = getTokenOffset(Math.max(0, idx));
-        const r = getTileRectRelativeToBoard(tile, board);
-
-        // Center inside tile (token size ~ 26px, so subtract ~13px)
-        const x = r.x + r.w / 2 - 13 + off.dx;
-        const y = r.y + r.h / 2 - 13 + off.dy;
-
-        setTokenPosition(token, x, y, animate);
-        BQ_LAST_POSITIONS.set(String(p.id), pos);
-    });
-
-    // Remove tokens for players no longer present
-    for (const [pid, el] of BQ_TOKEN_ELEMS.entries()) {
-        if (!players.some((p) => String(p.id) === String(pid))) {
-            try { el.remove(); } catch (_) { }
-            BQ_TOKEN_ELEMS.delete(pid);
-            BQ_LAST_POSITIONS.delete(pid);
-        }
-    }
-}
-
-async function animateStepMove(gameState, playerId, fromPos, toPos, stepMs = 220) {
-    if (!gameState || !Array.isArray(gameState.players)) return;
-
-    const board = document.getElementById("board-tiles");
-    if (!board) return;
-
-    ensureTokenLayer();
-
-    const p = gameState.players.find((pp) => String(pp.id) === String(playerId));
-    if (!p) return;
-
-    const token = getOrCreateToken(p, gameState);
-    if (!token) return;
-
-    // Big jumps = teleport → just snap
-    if (Math.abs(toPos - fromPos) > 10) return;
-
-    const dir = toPos >= fromPos ? 1 : -1;
-
-    // Make sure transition class is on and duration matches stepMs
-    token.classList.add("token-anim");
-    token.style.transitionDuration = `${stepMs}ms`;
-
-    for (let pos = fromPos; pos !== toPos; pos += dir) {
-        const nextPos = pos + dir;
-        const tile = document.querySelector(`.board-tile[data-position="${nextPos}"]`);
-        if (!tile) break;
-        if (tile.classList.contains("board-tile-portal")) continue;
-
-        const r = getTileRectRelativeToBoard(tile, board);
-        const players = gameState.players || [];
-        const byPos = computeTileOccupancy(players);
-        const idx = (byPos[nextPos] || []).findIndex(pp => String(pp.id) === String(playerId));
-        const off = getTokenOffset(Math.max(0, idx));
-
-        const x = r.x + r.w / 2 - 13 + off.dx;
-        const y = r.y + r.h / 2 - 13 + off.dy;
-
-        // Critical: give the browser a frame boundary before applying the new transform
-        await nextFrame();
-
-        // Keep your translateY(var(--stack-offset)) so CSS matches snap positioning
-        token.style.transform =
-            `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) translateY(var(--stack-offset, 0))`;
-        token.classList.remove("token-anim");
-        token.style.transitionDuration = "";
-        // Wait for the actual end of transition (not a timer guess)
-        await waitForTransformTransition(token, stepMs);
-    }
-
-    BQ_LAST_POSITIONS.set(String(playerId), toPos);
-}
-
 
 function getPlayerInitials(player) {
     const name = (player.username || "").trim();
@@ -1678,8 +1392,69 @@ function getPlayerInitials(player) {
 }
 
 function renderPlayerTokens(gameState) {
-    if (BQ_IS_ANIMATING) return;
-    snapAllTokensToState(gameState, false);
+    if (!gameState || !Array.isArray(gameState.players)) return;
+
+    // FIX: Deduplicate players for token rendering
+    const seenIds = new Set();
+    const uniquePlayers = [];
+    for (const p of gameState.players) {
+        if (!seenIds.has(p.id)) {
+            seenIds.add(p.id);
+            uniquePlayers.push(p);
+        }
+    }
+
+    // Clear existing tokens
+    const tiles = document.querySelectorAll(".board-tile");
+    tiles.forEach(tile => {
+        const tokenContainer = tile.querySelector(".tile-tokens");
+        if (tokenContainer) {
+            tokenContainer.innerHTML = "";
+        }
+    });
+
+    // Build mapping: tileIndex -> [players]
+    const playersByTile = {};
+    uniquePlayers.forEach(player => {
+        const pos = typeof player.position === "number" ? player.position : 0;
+        if (!playersByTile[pos]) {
+            playersByTile[pos] = [];
+        }
+        playersByTile[pos].push(player);
+    });
+
+    // Render tokens into each tile
+    Object.entries(playersByTile).forEach(([tileIndex, players]) => {
+        // ... (keep existing token DOM creation)
+        const tile = document.querySelector(
+            `.board-tile[data-position="${tileIndex}"]`
+        );
+        if (tile && tile.classList.contains("board-tile-portal")) {
+            return;
+        }
+        if (!tile) return;
+
+        let tokenContainer = tile.querySelector(".tile-tokens");
+        if (!tokenContainer) {
+            tokenContainer = document.createElement("div");
+            tokenContainer.classList.add("tile-tokens");
+            tile.appendChild(tokenContainer);
+        }
+
+        players.forEach((player, idx) => {
+            const token = document.createElement("div");
+            token.classList.add("player-token");
+
+            if (gameState.current_player_id &&
+                String(gameState.current_player_id) === String(player.id)) {
+                token.classList.add("player-token-current");
+            }
+
+            token.style.setProperty("--token-index", idx);
+            token.textContent = getPlayerInitials(player);
+            tokenContainer.appendChild(token);
+        });
+    });
 }
 
 
@@ -1692,9 +1467,6 @@ document.addEventListener("DOMContentLoaded", function () {
     window.gamePoller = setInterval(function () {
         fetchGameState(window.GAME_ID);
     }, 2000);
-    window.addEventListener("resize", () => {
-        if (window.GAME_STATE) snapAllTokensToState(window.GAME_STATE, false);
-    });
 
     const rollBtn = document.getElementById("roll-button");
     if (rollBtn) rollBtn.addEventListener("click", handleRollClick);

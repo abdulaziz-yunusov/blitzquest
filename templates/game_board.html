@@ -10,220 +10,214 @@
 {% block content %}
 <div class="board-page">
 
-  <!-- Top bar -->
-  <section class="board-header">
-    <div class="board-header-left">
-      <div class="game-avatar">{{ game.code|slice:":2" }}</div>
-      <div>
-        <h2 class="board-title">Game {{ game.code }}</h2>
-        <div class="board-subtitle">
-          {{ game.get_mode_display }} mode • {{ game.players.count }}/{{ game.max_players }} players
+    <!-- Top bar -->
+    <section class="board-header">
+        <div class="board-header-left">
+            <div class="game-avatar">{{ game.code|slice:":2" }}</div>
+            <div>
+                <h2 class="board-title">Game {{ game.code }}</h2>
+                <div class="board-subtitle">
+                    {{ game.get_mode_display }} mode • {{ game.players.count }}/{{ game.max_players }} players
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-    <div class="board-header-right">
-      <span class="badge badge-status badge-{{ game.status }}">
-        {{ game.get_status_display }}
-      </span>
-      <a href="{% url 'game:game_detail' game.id %}" class="btn btn-secondary btn-sm">
-        Back to lobby
-      </a>
-    </div>
-  </section>
-
-  <!-- Main layout: big board + right side panel -->
-  <section class="board-layout">
-    <aside class="board-inventory">
-      <div class="sidebar-section">
-        <h3>Your inventory</h3>
-        <div class="inventory-meta">
-          <div>Shield: <strong id="inv-shield">0</strong></div>
-          <div>Extra rolls: <strong id="inv-extra-rolls">0</strong></div>
+        <div class="board-header-right">
+            <span class="badge badge-status badge-{{ game.status }}">
+                {{ game.get_status_display }}
+            </span>
+            <a href="{% url 'game:game_detail' game.id %}" class="btn btn-secondary btn-sm">
+                Back to lobby
+            </a>
         </div>
+    </section>
 
-        <div id="inventory-cards" class="inventory-cards"></div>
+    <!-- Main layout: big board + right side panel -->
+    <section class="board-layout">
+        <aside class="board-inventory">
+            <div class="sidebar-section">
+                <h3>Your inventory</h3>
+                <div class="inventory-meta">
+                <div>Shield: <strong id="inv-shield">0</strong></div>
+                <div>Extra rolls: <strong id="inv-extra-rolls">0</strong></div>
+                </div>
 
-        <div class="inventory-hint">
-          You can use support cards any time.
-        </div>
-      </div>
-    </aside>
+                <div id="inventory-cards" class="inventory-cards"></div>
 
-    <!-- MAIN BOARD AREA -->
-    <div class="board-main-wrap">
-      <div class="board-main-header">
-        <h3 class="section-title">
-          Board
-          {% if tiles %}
-          ({{ tiles|length }} tiles)
-          {% endif %}
-        </h3>
-        <div class="section-subtitle">
-          Tiles are generated randomly when the game starts.
-        </div>
-      </div>
+                <div class="inventory-hint">
+                You can use support cards any time.
+                </div>
+            </div>
+        </aside>
 
-      <!-- Board tiles.
+        <!-- MAIN BOARD AREA -->
+        <div class="board-main-wrap">
+            <div class="board-main-header">
+                <h3 class="section-title">
+                    Board
+                    {% if tiles %}
+                        ({{ tiles|length }} tiles)
+                    {% endif %}
+                </h3>
+                <div class="section-subtitle">
+                    Tiles are generated randomly when the game starts.
+                </div>
+            </div>
+
+            <!-- Board tiles.
                  Initial server render is simple; JS will replace this with
                  live state from /games/<id>/state/ -->
-      <div id="board-tiles" class="board-tiles-ring">
-        {% for tile in tiles %}
-        <div class="board-tile board-tile-{{ tile.tile_type|lower }}" data-position="{{ tile.position }}">
-          <span class="board-tile-index">{{ tile.position|add:1 }}</span>
-          <span class="board-tile-symbol">
-            {% if tile.tile_type == "start" %}S
-            {% elif tile.tile_type == "question" %}?{# Blitz question #}
-            {% elif tile.tile_type == "trap" %}!{# Trap #}
-            {% elif tile.tile_type == "heal" %}+{# Heal #}
-            {% elif tile.tile_type == "bonus" %}B
-            {% elif tile.tile_type == "warp" %}W
-            {% elif tile.tile_type == "mass_warp" %}MW
-            {% elif tile.tile_type == "duel" %}D
-            {% elif tile.tile_type == "shop" %}${# Shop #}
-            {% elif tile.tile_type == "empty" %}&nbsp;
-            {% elif tile.tile_type == "finish" %}F
-            {% endif %}
-          </span>
-          <div class="tile-tokens"></div>
-        </div>
-        {% endfor %}
-      </div>
-
-      <!-- Legend -->
-      <div class="board-legend">
-        <span class="legend-item">
-          <span class="legend-color board-tile-start"></span> Start
-        </span>
-        <span class="legend-item">
-          <span class="legend-color board-tile-finish"></span> Finish
-        </span>
-        <span class="legend-item">
-          <span class="legend-color board-tile-question"></span> Question
-        </span>
-        <span class="legend-item">
-          <span class="legend-color board-tile-trap"></span> Trap
-        </span>
-        <span class="legend-item">
-          <span class="legend-color board-tile-heal"></span> Heal
-        </span>
-        <span class="legend-item">
-          <span class="legend-color board-tile-bonus"></span> Bonus
-        </span>
-        <span class="legend-item">
-          <span class="legend-color board-tile-warp"></span> Warp
-        </span>
-        <span class="legend-item">
-          <span class="legend-color board-tile-mass_warp"></span> Mass warp
-        </span>
-        <span class="legend-item">
-          <span class="legend-color board-tile-duel"></span> Duel
-        </span>
-        <span class="legend-item">
-          <span class="legend-color board-tile-shop"></span> Shop
-        </span>
-        <span class="legend-item">
-          <span class="legend-color board-tile-empty"></span> Empty
-        </span>
-        <span class="legend-item">
-          <span class="legend-color board-tile-portal"></span> Portal
-        </span>
-      </div>
-    </div>
-
-    <!-- SIDEBAR: turn/dice, players, activity -->
-    <aside class="board-sidebar">
-      <!-- Turn & dice -->
-      <div class="sidebar-section">
-        <h3>Turn &amp; dice</h3>
-        <div id="current-turn-label" class="current-turn-label">
-          Determining current player.
-        </div>
-        <div class="dice-display-wrapper">
-          <div id="dice-display" class="dice-display" data-has-value="">
-            <div class="bq-dice">
-              <ol class="bq-die-list even-roll" data-roll="1" id="bq-die-1" aria-label="Dice">
-                <li class="bq-die-item" data-side="1"><span class="bq-dot"></span></li>
-                <li class="bq-die-item" data-side="2"><span class="bq-dot"></span><span class="bq-dot"></span></li>
-                <li class="bq-die-item" data-side="3"><span class="bq-dot"></span><span class="bq-dot"></span><span
-                    class="bq-dot"></span></li>
-                <li class="bq-die-item" data-side="4"><span class="bq-dot"></span><span class="bq-dot"></span><span
-                    class="bq-dot"></span><span class="bq-dot"></span>
-                </li>
-                <li class="bq-die-item" data-side="5"><span class="bq-dot"></span><span class="bq-dot"></span><span
-                    class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span></li>
-                <li class="bq-die-item" data-side="6"><span class="bq-dot"></span><span class="bq-dot"></span><span
-                    class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span
-                    class="bq-dot"></span>
-                </li>
-              </ol>
+            <div id="board-tiles" class="board-tiles-ring">
+                {% for tile in tiles %}
+                    <div class="board-tile board-tile-{{ tile.tile_type|lower }}"
+                         data-position="{{ tile.position }}">
+                        <span class="board-tile-index">{{ tile.position|add:1 }}</span>
+                        <span class="board-tile-symbol">
+                            {% if tile.tile_type == "start" %}S
+                            {% elif tile.tile_type == "question" %}?{# Blitz question #}
+                            {% elif tile.tile_type == "trap" %}!{# Trap #}
+                            {% elif tile.tile_type == "heal" %}+{# Heal #}
+                            {% elif tile.tile_type == "bonus" %}B
+                            {% elif tile.tile_type == "warp" %}W
+                            {% elif tile.tile_type == "mass_warp" %}MW
+                            {% elif tile.tile_type == "duel" %}D
+                            {% elif tile.tile_type == "shop" %}${# Shop #}
+                            {% elif tile.tile_type == "empty" %}&nbsp;
+                            {% elif tile.tile_type == "finish" %}F
+                            {% endif %}
+                        </span>
+                        <div class="tile-tokens"></div>
+                    </div>
+                {% endfor %}
             </div>
 
-            <div id="dice-text" class="dice-text">
-              Roll the dice when it is your turn.
+            <!-- Legend -->
+            <div class="board-legend">
+                <span class="legend-item">
+                    <span class="legend-color board-tile-start"></span> Start
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color board-tile-finish"></span> Finish
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color board-tile-question"></span> Question
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color board-tile-trap"></span> Trap
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color board-tile-heal"></span> Heal
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color board-tile-bonus"></span> Bonus
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color board-tile-warp"></span> Warp
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color board-tile-mass_warp"></span> Mass warp
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color board-tile-duel"></span> Duel
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color board-tile-shop"></span> Shop
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color board-tile-empty"></span> Empty
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color board-tile-portal"></span> Portal
+                </span>
             </div>
-          </div>
-          <button type="button" id="roll-button" class="btn btn-primary">
-            Roll dice
-          </button>
         </div>
-      </div>
 
-      <!-- Players -->
-      <div class="sidebar-section">
-        <h3>Players</h3>
-        <div class="sidebar-player-count">
-          <span id="player-count">
-            {{ game.players.count }} / {{ game.max_players }}
-          </span>
-        </div>
-        <ul class="player-list" id="player-list">
-          {% for p in players %}
-          <li class="player-row">
-            <div class="player-main">
-              <div class="player-avatar">
-                {{ p.user.username|first|upper }}
-              </div>
-              <div class="player-text">
-                <div class="player-name">
-                  {{ p.user.username }}
-                  {% if game.host_id == p.user_id %}
-                  <span class="player-role">Host</span>
-                  {% endif %}
-                  {% if forloop.first %}
-                  <span class="player-role player-role-turn">Turn order #1</span>
-                  {% endif %}
+        <!-- SIDEBAR: turn/dice, players, activity -->
+        <aside class="board-sidebar">
+            <!-- Turn & dice -->
+            <div class="sidebar-section">
+                <h3>Turn &amp; dice</h3>
+                <div id="current-turn-label" class="current-turn-label">
+                    Determining current player.
                 </div>
-                <div class="player-meta">
-                  Turn order: {{ p.turn_order|add:1 }}
-                </div>
-              </div>
-            </div>
-            <div class="player-stats">
-              <span class="player-stat">HP: <strong>{{ p.hp }}</strong></span>
-              <span class="player-stat">Coins: <strong>{{ p.coins }}</strong></span>
-              <span class="player-stat">Pos: <strong>{{ p.position }}</strong></span>
-              <span class="player-stat">
-                {% if p.is_alive %}
-                <span class="badge badge-soft">Alive</span>
-                {% else %}
-                <span class="badge badge-soft badge-soft-danger">Eliminated</span>
-                {% endif %}
-              </span>
-            </div>
-          </li>
-          {% empty %}
-          <li>No players</li>
-          {% endfor %}
-        </ul>
-      </div>
+                <div class="dice-display-wrapper">
+                    <div id="dice-display" class="dice-display" data-has-value="">
+                        <div class="bq-dice">
+                        <ol class="bq-die-list even-roll" data-roll="1" id="bq-die-1" aria-label="Dice">
+                            <li class="bq-die-item" data-side="1"><span class="bq-dot"></span></li>
+                            <li class="bq-die-item" data-side="2"><span class="bq-dot"></span><span class="bq-dot"></span></li>
+                            <li class="bq-die-item" data-side="3"><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span></li>
+                            <li class="bq-die-item" data-side="4"><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span></li>
+                            <li class="bq-die-item" data-side="5"><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span></li>
+                            <li class="bq-die-item" data-side="6"><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span></li>
+                        </ol>
+                        </div>
 
-      <!-- Activity log -->
-      <div class="sidebar-section">
-        <h3>Activity</h3>
-        <div id="dice-log" class="dice-log"></div>
-      </div>
-    </aside>
-  </section>
+                        <div id="dice-text" class="dice-text">
+                        Roll the dice when it is your turn.
+                        </div>
+                    </div>
+                    <button type="button" id="roll-button" class="btn btn-primary">
+                        Roll dice
+                    </button>
+                </div>
+            </div>
+
+            <!-- Players -->
+            <div class="sidebar-section">
+                <h3>Players</h3>
+                <div class="sidebar-player-count">
+                    <span id="player-count">
+                        {{ game.players.count }} / {{ game.max_players }}
+                    </span>
+                </div>
+                <ul class="player-list" id="player-list">
+                    {% for p in players %}
+                        <li class="player-row">
+                            <div class="player-main">
+                                <div class="player-avatar">
+                                    {{ p.user.username|first|upper }}
+                                </div>
+                                <div class="player-text">
+                                    <div class="player-name">
+                                        {{ p.user.username }}
+                                        {% if game.host_id == p.user_id %}
+                                            <span class="player-role">Host</span>
+                                        {% endif %}
+                                        {% if forloop.first %}
+                                            <span class="player-role player-role-turn">Turn order #1</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="player-meta">
+                                        Turn order: {{ p.turn_order|add:1 }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="player-stats">
+                                <span class="player-stat">HP: <strong>{{ p.hp }}</strong></span>
+                                <span class="player-stat">Coins: <strong>{{ p.coins }}</strong></span>
+                                <span class="player-stat">Pos: <strong>{{ p.position }}</strong></span>
+                                <span class="player-stat">
+                                    {% if p.is_alive %}
+                                        <span class="badge badge-soft">Alive</span>
+                                    {% else %}
+                                        <span class="badge badge-soft badge-soft-danger">Eliminated</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </li>
+                    {% empty %}
+                        <li>No players</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Activity log -->
+            <div class="sidebar-section">
+                <h3>Activity</h3>
+                <div id="dice-log" class="dice-log"></div>
+            </div>
+        </aside>
+    </section>
 </div>
 <div id="finishModal" class="bq-modal bq-hidden" aria-hidden="true">
   <div class="bq-modal-card" role="dialog" aria-modal="true" aria-labelledby="finishTitle">
@@ -279,23 +273,27 @@
 
 <!-- Question modal -->
 <div id="questionModal" class="qmodal is-hidden" aria-hidden="true">
-  <div class="qmodal-backdrop"></div>
+    <div class="qmodal-backdrop"></div>
 
-  <div class="qmodal-card" role="dialog" aria-modal="true" aria-labelledby="qmodalTitle">
-    <div class="qmodal-header">
-      <h3 id="qmodalTitle">Question</h3>
+    <div class="qmodal-card" role="dialog" aria-modal="true" aria-labelledby="qmodalTitle">
+        <div class="qmodal-header">
+            <h3 id="qmodalTitle">Question</h3>
 
-      <button id="changeQuestionBtn" class="qhead-btn" type="button" disabled title="Change question">
-        🔄 Change
-      </button>
+            <button id="changeQuestionBtn"
+                    class="qhead-btn"
+                    type="button"
+                    disabled
+                    title="Change question">
+                🔄 Change
+            </button>
+        </div>
+
+        <div class="qmodal-body">
+            <p id="qPrompt" class="qprompt"></p>
+                <div id="qChoices" class="qchoices"></div>
+            <p id="qFeedback" class="qfeedback"></p>
+        </div>
     </div>
-
-    <div class="qmodal-body">
-      <p id="qPrompt" class="qprompt"></p>
-      <div id="qChoices" class="qchoices"></div>
-      <p id="qFeedback" class="qfeedback"></p>
-    </div>
-  </div>
 </div>
 
 <!-- Shop modal -->
@@ -355,9 +353,9 @@
 
 {% block extra_js %}
 <script>
-  window.GAME_ID = {{ game.id | safe }};
-  window.GAME_HOST_USER_ID = {{ game.host_id |default: "null" | safe }};
-  window.GAME_MAX_PLAYERS = {{ game.max_players | safe }};
+    window.GAME_ID = {{ game.id|safe }};
+    window.GAME_HOST_USER_ID = {{ game.host_id|default:"null"|safe }};
+    window.GAME_MAX_PLAYERS = {{ game.max_players|safe }};
 </script>
 <script>
   window.BQ_LOBBY_URL = "{% url 'game:game_detail' game.id %}";
