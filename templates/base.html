@@ -1,81 +1,84 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <title>{% block title %}BlitzQuest{% endblock %}</title>
+  <meta charset="UTF-8">
+  <title>{% block title %}BlitzQuest{% endblock %}</title>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Global stylesheet -->
-    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <!-- Global stylesheet -->
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
 
-    {# Page-specific CSS can be added from child templates #}
-    {% block extra_css %}{% endblock %}
-    {% block extra_js %}{% endblock %}
+  {# Page-specific CSS can be added from child templates #}
+  {% block extra_css %}{% endblock %}
+  {% block extra_js %}{% endblock %}
 </head>
+
 <body>
-    <div class="page-root">
-        <!-- Background decoration -->
-        <div class="bg-blur bg-blur-1"></div>
-        <div class="bg-blur bg-blur-2"></div>
+  <div class="page-root">
+    <!-- Background decoration -->
+    <div class="bg-blur bg-blur-1"></div>
+    <div class="bg-blur bg-blur-2"></div>
 
-        <header class="site-header">
-            <div class="site-header-inner">
-                <a href="{% url 'game:home' %}" class="brand">
-                    <div class="brand-logo">BQ</div>
-                    <div class="brand-text">
-                        <span class="brand-title">BlitzQuest</span>
-                        <span class="brand-subtitle">Knowledge Board Duel</span>
-                    </div>
-                </a>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a href="{% url 'game:home' %}" class="brand">
+          <div class="brand-logo">BQ</div>
+          <div class="brand-text">
+            <span class="brand-title">BlitzQuest</span>
+            <span class="brand-subtitle">Knowledge Board Duel</span>
+          </div>
+        </a>
 
-                <nav class="main-nav">
-                    <a href="{% url 'game:home' %}">Home</a>
-                    <a href="{% url 'game:game_list' %}">Games</a>
-                    <a href="{% url 'game:game_create' %}">Create</a>
-                    <a href="{% url 'game:game_join' %}">Join</a>
-                </nav>
+        <nav class="main-nav">
+          <a href="{% url 'game:home' %}">Home</a>
+          <a href="{% url 'game:game_list' %}">Games</a>
+          <a href="{% url 'game:game_create' %}">Create</a>
+          <a href="{% url 'game:game_join' %}">Join</a>
+        </nav>
 
-                <div class="user-nav">
-                    {% if user.is_authenticated %}
-                        <span class="user-greeting">Hi, {{ user.username }}</span>
-                        <form method="post" action="{% url 'logout' %}" class="logout-form">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-outline-small">Logout</button>
-                        </form>
-                    {% else %}
-                        <a href="{% url 'login' %}" class="btn btn-outline-small">Login</a>
-                        <a href="{% url 'signup' %}" class="btn btn-primary-small">Sign Up</a>
-                    {% endif %}
-                </div>
-            </div>
-        </header>
+        <div class="user-nav">
+          {% if user.is_authenticated %}
+          <span class="user-greeting">Hi, {{ user.username }}</span>
+          <form method="post" action="{% url 'logout' %}" class="logout-form">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-small">Logout</button>
+          </form>
+          {% else %}
+          <a href="{% url 'login' %}" class="btn btn-outline-small">Login</a>
+          <a href="{% url 'signup' %}" class="btn btn-primary-small">Sign Up</a>
+          {% endif %}
+        </div>
+      </div>
+    </header>
 
-        <main class="site-main">
-            {% if messages %}
-                <div class="message-container">
-                    {% for message in messages %}
-                        <div class="message message-{{ message.tags }}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+    <main class="site-main">
+      {% if messages %}
+      <div class="message-container">
+        {% for message in messages %}
+        <div class="message message-{{ message.tags }}">
+          {{ message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
 
-            {% block content %}
-            {% endblock %}
-        </main>
+      {% block content %}
+      {% endblock %}
+    </main>
 
-        <footer class="site-footer">
-            <div class="site-footer-inner">
-                <span>&copy; {{ request.META.SERVER_NAME }} — BlitzQuest</span>
-                <span class="footer-hint">2–4 player Django board game prototype</span>
-            </div>
-        </footer>
-    </div>
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <span>&copy; {{ request.META.SERVER_NAME }} — BlitzQuest</span>
+        <span class="footer-hint">2–4 player Django board game prototype</span>
+      </div>
+    </footer>
+  </div>
 
-    <!-- Optional JS -->
-    <script src="{% static 'js/main.js' %}"></script>
+  <!-- Optional JS -->
+  <script src="{% static 'js/main.js' %}"></script>
 </body>
+
 </html>

@@ -9,62 +9,62 @@
 
 {% block content %}
 <div class="gj-page">
-    <section class="gj-card gj-card-main">
-        <h2 class="gj-title">Join a game</h2>
-        <p class="gj-subtitle">
-            Enter the lobby code shared by your friend or host.
-            You will join the game with default stats and wait in the lobby until the host starts.
-        </p>
+  <section class="gj-card gj-card-main">
+    <h2 class="gj-title">Join a game</h2>
+    <p class="gj-subtitle">
+      Enter the lobby code shared by your friend or host.
+      You will join the game with default stats and wait in the lobby until the host starts.
+    </p>
 
-        <form method="post" class="gj-form">
-            {% csrf_token %}
+    <form method="post" class="gj-form">
+      {% csrf_token %}
 
-            {% for field in form %}
-                <div class="gj-field">
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.help_text %}
-                        <div class="gj-help">{{ field.help_text }}</div>
-                    {% endif %}
-                    {% for error in field.errors %}
-                        <div class="gj-error">{{ error }}</div>
-                    {% endfor %}
-                </div>
-            {% endfor %}
+      {% for field in form %}
+      <div class="gj-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}
+        <div class="gj-help">{{ field.help_text }}</div>
+        {% endif %}
+        {% for error in field.errors %}
+        <div class="gj-error">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endfor %}
 
-            {% if form.non_field_errors %}
-                <div class="gj-error-block">
-                    {% for error in form.non_field_errors %}
-                        {{ error }}<br>
-                    {% endfor %}
-                </div>
-            {% endif %}
+      {% if form.non_field_errors %}
+      <div class="gj-error-block">
+        {% for error in form.non_field_errors %}
+        {{ error }}<br>
+        {% endfor %}
+      </div>
+      {% endif %}
 
-            <div class="gj-actions">
-                <button type="submit" class="btn btn-primary">Join game</button>
-                <a href="{% url 'game:game_list' %}" class="gj-secondary-link">
-                    Back to games list
-                </a>
-            </div>
-        </form>
-    </section>
+      <div class="gj-actions">
+        <button type="submit" class="btn btn-primary">Join game</button>
+        <a href="{% url 'game:game_list' %}" class="gj-secondary-link">
+          Back to games list
+        </a>
+      </div>
+    </form>
+  </section>
 
-    <section class="gj-card gj-card-side">
-        <h3 class="gj-side-title">Where to find the code?</h3>
-        <ul class="gj-side-list">
-            <li>Your friend sees it on the lobby screen as the <strong>Game code</strong>.</li>
-            <li>Codes are short, in the format <strong>ABC123</strong> (letters and digits).</li>
-            <li>The game must still be in <strong>Waiting</strong> status to accept new players.</li>
-        </ul>
+  <section class="gj-card gj-card-side">
+    <h3 class="gj-side-title">Where to find the code?</h3>
+    <ul class="gj-side-list">
+      <li>Your friend sees it on the lobby screen as the <strong>Game code</strong>.</li>
+      <li>Codes are short, in the format <strong>ABC123</strong> (letters and digits).</li>
+      <li>The game must still be in <strong>Waiting</strong> status to accept new players.</li>
+    </ul>
 
-        <div class="gj-divider"></div>
+    <div class="gj-divider"></div>
 
-        <h3 class="gj-side-title">Joining notes</h3>
-        <ul class="gj-side-list">
-            <li>You will start with 3 HP, 0 coins, and a starting support card.</li>
-            <li>Your <strong>turn order</strong> is based on when you join.</li>
-            <li>Once the host starts the game, you’ll see the board and turns in real time.</li>
-        </ul>
-    </section>
+    <h3 class="gj-side-title">Joining notes</h3>
+    <ul class="gj-side-list">
+      <li>You will start with 3 HP, 0 coins, and a starting support card.</li>
+      <li>Your <strong>turn order</strong> is based on when you join.</li>
+      <li>Once the host starts the game, you’ll see the board and turns in real time.</li>
+    </ul>
+  </section>
 </div>
 {% endblock %}

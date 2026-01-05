@@ -12,9 +12,8 @@
 .gl-header-card {
     border-radius: 20px;
     background: radial-gradient(circle at top left,
-        rgba(148, 163, 184, 0.26),
-        rgba(15, 23, 42, 0.96)
-    );
+            rgba(148, 163, 184, 0.26),
+            rgba(15, 23, 42, 0.96));
     border: 1px solid rgba(148, 163, 184, 0.35);
     box-shadow: 0 20px 32px rgba(0, 0, 0, 0.6);
     padding: 1.1rem 1.05rem 1rem;
@@ -64,9 +63,8 @@
 .gl-panel {
     border-radius: 18px;
     background: radial-gradient(circle at top left,
-        rgba(30, 64, 175, 0.22),
-        rgba(15, 23, 42, 0.96)
-    );
+            rgba(30, 64, 175, 0.22),
+            rgba(15, 23, 42, 0.96));
     border: 1px solid rgba(30, 64, 175, 0.45);
     box-shadow: 0 18px 30px rgba(0, 0, 0, 0.55);
     padding: 0.95rem 0.95rem 0.9rem;
@@ -161,12 +159,14 @@
     font-size: 0.82rem;
     padding-inline: 0.9rem;
 }
+
 /* === Delete button (idle state) === */
 .gl-delete-btn {
     background: transparent;
     color: #ff5c5c;
     border: 1px solid rgba(255, 92, 92, 0.85);
-    border-radius: 999px; /* pill shape */
+    border-radius: 999px;
+    /* pill shape */
     padding: 0.35rem 1.1rem;
     font-size: 0.78rem;
     font-weight: 500;
@@ -180,11 +180,12 @@
 
 /* === Delete button (hover state) === */
 .gl-delete-btn:hover {
-    background: #1f2933; /* dark filled background */
+    background: #1f2933;
+    /* dark filled background */
     color: #ffffff;
     border-color: rgba(255, 92, 92, 0.9);
     box-shadow: 0 0 0 1px rgba(255, 92, 92, 0.15),
-                0 6px 16px rgba(0, 0, 0, 0.6);
+        0 6px 16px rgba(0, 0, 0, 0.6);
 }
 
 /* === Optional: active press feel === */
@@ -235,6 +236,7 @@
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
 .gl-game-actions {
     display: flex;
     align-items: center;
@@ -244,12 +246,14 @@
 .gl-delete-form {
     margin: 0;
 }
+
 /* === Delete button (idle state) === */
 .gl-delete-btn {
     background: transparent;
     color: #ff5c5c;
     border: 1px solid rgba(255, 92, 92, 0.85);
-    border-radius: 999px; /* pill shape */
+    border-radius: 999px;
+    /* pill shape */
     padding: 0.35rem 1.1rem;
     font-size: 0.78rem;
     font-weight: 500;
@@ -263,11 +267,12 @@
 
 /* === Delete button (hover state) === */
 .gl-delete-btn:hover {
-    background: #1f2933; /* dark filled background */
+    background: #1f2933;
+    /* dark filled background */
     color: #ffffff;
     border-color: rgba(255, 92, 92, 0.9);
     box-shadow: 0 0 0 1px rgba(255, 92, 92, 0.15),
-                0 6px 16px rgba(0, 0, 0, 0.6);
+        0 6px 16px rgba(0, 0, 0, 0.6);
 }
 
 /* === Optional: active press feel === */

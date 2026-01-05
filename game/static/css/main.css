@@ -229,6 +229,7 @@ a:hover {
 .gl-game-close:active {
     transform: translateY(0);
 }
+
 .delete-form {
     margin: 0;
     display: inline-block;
@@ -310,10 +311,12 @@ a:hover {
     margin: 0 auto;
     padding: 1.6rem 1.25rem 2.4rem;
 }
+
 .logout-form {
     display: inline;
     margin: 0;
 }
+
 /* Django messages */
 .message-container {
     margin-bottom: 1rem;
@@ -602,6 +605,7 @@ a:hover {
 .footer-hint {
     opacity: 0.8;
 }
+
 .btn-danger {
     background: transparent;
     color: #f87171;
@@ -617,6 +621,7 @@ a:hover {
 .btn-danger:active {
     transform: translateY(0);
 }
+
 /* ========== Responsive ========== */
 @media (max-width: 860px) {
     .site-header-inner {
@@ -625,7 +630,8 @@ a:hover {
     }
 
     .main-nav {
-        display: none; /* keep header simpler on small screens */
+        display: none;
+        /* keep header simpler on small screens */
     }
 
     .hero {

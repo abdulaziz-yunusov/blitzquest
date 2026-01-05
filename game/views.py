@@ -906,7 +906,7 @@ def use_card(request, game_id):
         game.apply_basic_move(me, dice_value=steps)
 
     elif et == "heal":
-        me.hp = min(3, me.hp + 2)
+        me.hp = me.hp + 2
         me.save(update_fields=["hp"])
 
     elif et == "shield":

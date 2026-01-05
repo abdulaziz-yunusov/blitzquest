@@ -58,25 +58,52 @@ async function safeJson(res) {
     }
 }
 
+function nextFrame() {
+    return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+function waitForTransformTransition(el, ms) {
+    return new Promise((resolve) => {
+        let done = false;
+
+        const finish = () => {
+            if (done) return;
+            done = true;
+            el.removeEventListener("transitionend", onEnd);
+            clearTimeout(timer);
+            resolve();
+        };
+
+        const onEnd = (e) => {
+            if (e.propertyName === "transform") finish();
+        };
+
+        // Fallback in case transitionend doesn't fire (tab inactive, etc.)
+        const timer = setTimeout(finish, ms + 80);
+
+        el.addEventListener("transitionend", onEnd, { once: true });
+    });
+}
+
 function getDiceEls() {
-  return {
-    die: document.getElementById("bq-die-1"),
-    diceText: document.getElementById("dice-text"),
-    diceDisplay: document.getElementById("dice-display"),
-  };
+    return {
+        die: document.getElementById("bq-die-1"),
+        diceText: document.getElementById("dice-text"),
+        diceDisplay: document.getElementById("dice-display"),
+    };
 }
 
 function toggleDiceClasses(die) {
-  if (!die) return;
-  die.classList.toggle("odd-roll");
-  die.classList.toggle("even-roll");
+    if (!die) return;
+    die.classList.toggle("odd-roll");
+    die.classList.toggle("even-roll");
 }
 
 function animateDieTo(value) {
-  const { die } = getDiceEls();
-  if (!die) return;
-  toggleDiceClasses(die);
-  die.dataset.roll = String(value);
+    const { die } = getDiceEls();
+    if (!die) return;
+    toggleDiceClasses(die);
+    die.dataset.roll = String(value);
 }
 
 /**
@@ -110,132 +137,132 @@ async function applyGameStateUpdate(payload) {
 }
 // ---------- UI: question modal ----------
 function showQuestionModal(q, state) {
-  const modal = document.getElementById("questionModal");
-  const prompt = document.getElementById("qPrompt");
-  const choicesWrap = document.getElementById("qChoices");
-  const feedback = document.getElementById("qFeedback");
-  const changeBtn = document.getElementById("changeQuestionBtn");
+    const modal = document.getElementById("questionModal");
+    const prompt = document.getElementById("qPrompt");
+    const choicesWrap = document.getElementById("qChoices");
+    const feedback = document.getElementById("qFeedback");
+    const changeBtn = document.getElementById("changeQuestionBtn");
 
-  prompt.textContent = q.prompt || "";
-  feedback.textContent = "";
-  choicesWrap.innerHTML = "";
+    prompt.textContent = q.prompt || "";
+    feedback.textContent = "";
+    choicesWrap.innerHTML = "";
 
-  const gameId = window.GAME_ID;
+    const gameId = window.GAME_ID;
 
-  // detect change-question card
-  const cards = state && Array.isArray(state.your_cards) ? state.your_cards : [];
-  const canChange = !!(q && !q.changed_once);
-  const changeCard = canChange
-    ? cards.find(c =>
-        (c.effect_type || "").toLowerCase() === "change_question" ||
-        (c.code || "").toLowerCase() === "change_question"
-      )
-    : null;
+    // detect change-question card
+    const cards = state && Array.isArray(state.your_cards) ? state.your_cards : [];
+    const canChange = !!(q && !q.changed_once);
+    const changeCard = canChange
+        ? cards.find(c =>
+            (c.effect_type || "").toLowerCase() === "change_question" ||
+            (c.code || "").toLowerCase() === "change_question"
+        )
+        : null;
 
-  // header button behavior
-  if (changeBtn){
-    if (!canChange) {
-      changeBtn.textContent = "🔄 Used";
-      changeBtn.disabled = true;
-    } else if (!changeCard) {
-      changeBtn.textContent = "🔄 No card";
-      changeBtn.disabled = true;
-    } else {
-      changeBtn.textContent = "🔄 Change";
-      changeBtn.disabled = false;
+    // header button behavior
+    if (changeBtn) {
+        if (!canChange) {
+            changeBtn.textContent = "🔄 Used";
+            changeBtn.disabled = true;
+        } else if (!changeCard) {
+            changeBtn.textContent = "🔄 No card";
+            changeBtn.disabled = true;
+        } else {
+            changeBtn.textContent = "🔄 Change";
+            changeBtn.disabled = false;
+        }
     }
-  }
 
-  changeBtn.onclick = async () => {
-    if (!canChange || !changeCard) return;
+    changeBtn.onclick = async () => {
+        if (!canChange || !changeCard) return;
 
-    // disable interactions while changing
-    changeBtn.disabled = true;
-    Array.from(choicesWrap.querySelectorAll("button")).forEach(b => (b.disabled = true));
-    feedback.textContent = "Changing question...";
+        // disable interactions while changing
+        changeBtn.disabled = true;
+        Array.from(choicesWrap.querySelectorAll("button")).forEach(b => (b.disabled = true));
+        feedback.textContent = "Changing question...";
 
-    try {
-      await useCard(gameId, changeCard.id);
-      // useCard() should refresh state and call showQuestionModal again
-    } catch (e) {
-      console.error(e);
-      feedback.textContent = "Could not change question.";
-      changeBtn.disabled = false;
-      Array.from(choicesWrap.querySelectorAll("button")).forEach(b => (b.disabled = false));
-    }
-  };
+        try {
+            await useCard(gameId, changeCard.id);
+            // useCard() should refresh state and call showQuestionModal again
+        } catch (e) {
+            console.error(e);
+            feedback.textContent = "Could not change question.";
+            changeBtn.disabled = false;
+            Array.from(choicesWrap.querySelectorAll("button")).forEach(b => (b.disabled = false));
+        }
+    };
 
-  // render options (IMPORTANT: class must be qchoice-btn)
-  (q.choices || []).forEach((text, idx) => {
-    const btn = document.createElement("button");
-    btn.className = "qchoice-btn";
-    btn.type = "button";
-    btn.dataset.qidx = String(idx);
-    btn.textContent = text;
+    // render options (IMPORTANT: class must be qchoice-btn)
+    (q.choices || []).forEach((text, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "qchoice-btn";
+        btn.type = "button";
+        btn.dataset.qidx = String(idx);
+        btn.textContent = text;
 
-    btn.addEventListener("click", async () => {
-      Array.from(choicesWrap.querySelectorAll("button")).forEach(b => b.disabled = true);
-      changeBtn.disabled = true;
-      try {
-        const resp = await fetch(`/games/${gameId}/answer_question/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
-            "X-CSRFToken": getCookie("csrftoken") || "",
-          },
-          body: JSON.stringify({ choice_index: idx }),
+        btn.addEventListener("click", async () => {
+            Array.from(choicesWrap.querySelectorAll("button")).forEach(b => b.disabled = true);
+            changeBtn.disabled = true;
+            try {
+                const resp = await fetch(`/games/${gameId}/answer_question/`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRFToken": getCookie("csrftoken") || "",
+                    },
+                    body: JSON.stringify({ choice_index: idx }),
+                });
+
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok) {
+                    feedback.textContent = (data && data.detail) ? data.detail : `Error: ${resp.status}`;
+                    Array.from(choicesWrap.querySelectorAll("button")).forEach(b => b.disabled = false);
+                    return;
+                }
+
+                const correct = data?.result?.correct;
+                feedback.textContent = correct ? "Correct: +1 coin, +1 HP" : "Wrong: -1 HP";
+
+                // Visual feedback (green/red) + show correct option if wrong
+                try {
+                    if (correct) {
+                        btn.classList.add("correct");
+                    } else {
+                        btn.classList.add("wrong");
+                        const correctIdx = (q && typeof q.correct_index === "number") ? q.correct_index : null;
+                        if (correctIdx !== null) {
+                            const correctBtn = choicesWrap.querySelector(`button[data-qidx="${correctIdx}"]`);
+                            if (correctBtn) correctBtn.classList.add("correct");
+                        }
+                    }
+                } catch (e) { /* ignore styling errors */ }
+
+                // refresh UI
+                if (data.game_state) {
+                    updateBoardUI(data.game_state);
+                    updatePlayersUI(data.game_state);
+                    updateDiceUI(data.game_state);
+                    renderPlayerTokens(data.game_state);
+                    renderQuestionUI(data.game_state);
+                    renderInventoryUI(data.game_state);
+
+                } else {
+                    fetchGameState(gameId);
+                }
+
+            } catch (e) {
+                console.error(e);
+                feedback.textContent = "Network error.";
+                Array.from(choicesWrap.querySelectorAll("button")).forEach(b => b.disabled = false);
+            }
         });
 
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) {
-          feedback.textContent = (data && data.detail) ? data.detail : `Error: ${resp.status}`;
-          Array.from(choicesWrap.querySelectorAll("button")).forEach(b => b.disabled = false);
-          return;
-        }
-
-        const correct = data?.result?.correct;
-        feedback.textContent = correct ? "Correct: +1 coin, +1 HP" : "Wrong: -1 HP";
-
-        // Visual feedback (green/red) + show correct option if wrong
-        try {
-          if (correct) {
-            btn.classList.add("correct");
-          } else {
-            btn.classList.add("wrong");
-            const correctIdx = (q && typeof q.correct_index === "number") ? q.correct_index : null;
-            if (correctIdx !== null) {
-              const correctBtn = choicesWrap.querySelector(`button[data-qidx="${correctIdx}"]`);
-              if (correctBtn) correctBtn.classList.add("correct");
-            }
-          }
-        } catch (e) { /* ignore styling errors */ }
-
-        // refresh UI
-        if (data.game_state) {
-          updateBoardUI(data.game_state);
-          updatePlayersUI(data.game_state);
-          updateDiceUI(data.game_state);
-          renderPlayerTokens(data.game_state);
-          renderQuestionUI(data.game_state);
-          renderInventoryUI(data.game_state);
-
-        } else {
-          fetchGameState(gameId);
-        }
-
-      } catch (e) {
-        console.error(e);
-        feedback.textContent = "Network error.";
-        Array.from(choicesWrap.querySelectorAll("button")).forEach(b => b.disabled = false);
-      }
+        choicesWrap.appendChild(btn);
     });
 
-    choicesWrap.appendChild(btn);
-  });
-
-  modal.classList.remove("is-hidden");
-  modal.setAttribute("aria-hidden", "false");
+    modal.classList.remove("is-hidden");
+    modal.setAttribute("aria-hidden", "false");
 }
 
 
@@ -521,49 +548,49 @@ async function shopClose() {
 // -----------------------------
 
 function setDraftModalVisible(visible) {
-  const modal = document.getElementById("draftModal");
-  if (!modal) return;
-  if (visible) {
-    modal.classList.remove("is-hidden");
-    modal.setAttribute("aria-hidden", "false");
-  } else {
-    modal.classList.add("is-hidden");
-    modal.setAttribute("aria-hidden", "true");
-  }
+    const modal = document.getElementById("draftModal");
+    if (!modal) return;
+    if (visible) {
+        modal.classList.remove("is-hidden");
+        modal.setAttribute("aria-hidden", "false");
+    } else {
+        modal.classList.add("is-hidden");
+        modal.setAttribute("aria-hidden", "true");
+    }
 }
 
 function renderDraftUI(state) {
-  // state.draft expected from backend to_public_state()
-  const draft = state && state.draft ? state.draft : null;
+    // state.draft expected from backend to_public_state()
+    const draft = state && state.draft ? state.draft : null;
 
-  // If not drafting, hide modal
-  if (!draft || !draft.active) {
-    setDraftModalVisible(false);
-    return;
-  }
+    // If not drafting, hide modal
+    if (!draft || !draft.active) {
+        setDraftModalVisible(false);
+        return;
+    }
 
-  setDraftModalVisible(true);
+    setDraftModalVisible(true);
 
-  const sub = document.getElementById("draftSub");
-  const choicesEl = document.getElementById("draftChoices");
-  const feedbackEl = document.getElementById("draftFeedback");
+    const sub = document.getElementById("draftSub");
+    const choicesEl = document.getElementById("draftChoices");
+    const feedbackEl = document.getElementById("draftFeedback");
 
-  if (sub) {
-    sub.textContent = `Pick ${Math.min(draft.picks_done + 1, draft.max_picks)} of ${draft.max_picks}`;
-  }
+    if (sub) {
+        sub.textContent = `Pick ${Math.min(draft.picks_done + 1, draft.max_picks)} of ${draft.max_picks}`;
+    }
 
-  if (feedbackEl) feedbackEl.textContent = "";
+    if (feedbackEl) feedbackEl.textContent = "";
 
-  if (!choicesEl) return;
+    if (!choicesEl) return;
 
-  const options = Array.isArray(draft.options) ? draft.options : [];
-  if (options.length === 0) {
-    choicesEl.innerHTML = `<div class="qchoice disabled">Waiting for opponents...</div>`;
-    return;
-  }
+    const options = Array.isArray(draft.options) ? draft.options : [];
+    if (options.length === 0) {
+        choicesEl.innerHTML = `<div class="qchoice disabled">Waiting for opponents...</div>`;
+        return;
+    }
 
-  // Build 3 buttons (options are card_type IDs)
-  choicesEl.innerHTML = options.map((opt) => `
+    // Build 3 buttons (options are card_type IDs)
+    choicesEl.innerHTML = options.map((opt) => `
     <button class="qchoice draft-choice"
             type="button"
             data-card-type="${opt.id}">
@@ -572,51 +599,51 @@ function renderDraftUI(state) {
     </button>
     `).join("");
 
-  // Click handlers
-  choicesEl.querySelectorAll("button[data-card-type]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const cardTypeId = btn.getAttribute("data-card-type");
-      const gameId = window.GAME_ID;
+    // Click handlers
+    choicesEl.querySelectorAll("button[data-card-type]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+            const cardTypeId = btn.getAttribute("data-card-type");
+            const gameId = window.GAME_ID;
 
-      // Disable all choices while sending
-      choicesEl.querySelectorAll("button").forEach((b) => (b.disabled = true));
+            // Disable all choices while sending
+            choicesEl.querySelectorAll("button").forEach((b) => (b.disabled = true));
 
-      try {
-        await draftPick(gameId, cardTypeId);
-        // After pick, refresh state immediately so next options show
-        if (typeof fetchGameState === "function") {
-          await fetchGameState();
-        }
-      } catch (err) {
-        if (feedbackEl) feedbackEl.textContent = err?.message || "Draft pick failed.";
-        // Re-enable choices
-        choicesEl.querySelectorAll("button").forEach((b) => (b.disabled = false));
-      }
+            try {
+                await draftPick(gameId, cardTypeId);
+                // After pick, refresh state immediately so next options show
+                if (typeof fetchGameState === "function") {
+                    await fetchGameState();
+                }
+            } catch (err) {
+                if (feedbackEl) feedbackEl.textContent = err?.message || "Draft pick failed.";
+                // Re-enable choices
+                choicesEl.querySelectorAll("button").forEach((b) => (b.disabled = false));
+            }
+        });
     });
-  });
 }
 
 async function draftPick(gameId, cardTypeId) {
-  const resp = await fetch(`/games/${gameId}/draft/pick/`, {
-    method: "POST",
-    headers: {
-      "X-Requested-With": "XMLHttpRequest",
-      "X-CSRFToken": getCookie("csrftoken") || "",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ card_type_id: cardTypeId }),
-  });
+    const resp = await fetch(`/games/${gameId}/draft/pick/`, {
+        method: "POST",
+        headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": getCookie("csrftoken") || "",
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ card_type_id: cardTypeId }),
+    });
 
-  if (!resp.ok) {
-    let msg = `Error: ${resp.status}`;
-    try {
-      const data = await resp.json();
-      if (data && (data.detail || data.error)) msg = data.detail || data.error;
-    } catch (_) {}
-    throw new Error(msg);
-  }
+    if (!resp.ok) {
+        let msg = `Error: ${resp.status}`;
+        try {
+            const data = await resp.json();
+            if (data && (data.detail || data.error)) msg = data.detail || data.error;
+        } catch (_) { }
+        throw new Error(msg);
+    }
 
-  return resp.json().catch(() => ({}));
+    return resp.json().catch(() => ({}));
 }
 
 // ============================
@@ -624,71 +651,71 @@ async function draftPick(gameId, cardTypeId) {
 // ============================
 
 function showDuelModal() {
-  const modal = document.getElementById("duelModal");
-  if (!modal) return;
+    const modal = document.getElementById("duelModal");
+    if (!modal) return;
 
-  modal.classList.remove("is-hidden");
-  modal.setAttribute("aria-hidden", "false");
+    modal.classList.remove("is-hidden");
+    modal.setAttribute("aria-hidden", "false");
 
-  // Optional: prevent background scroll (same UX as other modals)
-  document.body.classList.add("modal-open");
+    // Optional: prevent background scroll (same UX as other modals)
+    document.body.classList.add("modal-open");
 
-  // Clicking the backdrop does NOT close the duel
-  // (duel must resolve to avoid turn-skip bugs).
-  const backdrop = modal.querySelector(".dmodal-backdrop");
-  if (backdrop && !backdrop.dataset.bound) {
-    backdrop.dataset.bound = "1";
-    backdrop.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // Do nothing by design.
-    });
-  }
+    // Clicking the backdrop does NOT close the duel
+    // (duel must resolve to avoid turn-skip bugs).
+    const backdrop = modal.querySelector(".dmodal-backdrop");
+    if (backdrop && !backdrop.dataset.bound) {
+        backdrop.dataset.bound = "1";
+        backdrop.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Do nothing by design.
+        });
+    }
 
-  // Prevent clicks inside card from bubbling to backdrop
-  const card = modal.querySelector(".dmodal-card");
-  if (card && !card.dataset.bound) {
-    card.dataset.bound = "1";
-    card.addEventListener("click", (e) => e.stopPropagation());
-  }
+    // Prevent clicks inside card from bubbling to backdrop
+    const card = modal.querySelector(".dmodal-card");
+    if (card && !card.dataset.bound) {
+        card.dataset.bound = "1";
+        card.addEventListener("click", (e) => e.stopPropagation());
+    }
 
-  // Esc does NOT close (same reason)
-  if (!modal.dataset.escBound) {
-    modal.dataset.escBound = "1";
-    document.addEventListener("keydown", (e) => {
-      const isOpen = !modal.classList.contains("is-hidden");
-      if (!isOpen) return;
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    }, true);
-  }
+    // Esc does NOT close (same reason)
+    if (!modal.dataset.escBound) {
+        modal.dataset.escBound = "1";
+        document.addEventListener("keydown", (e) => {
+            const isOpen = !modal.classList.contains("is-hidden");
+            if (!isOpen) return;
+            if (e.key === "Escape") {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }, true);
+    }
 }
 
 function hideDuelModal() {
-  const modal = document.getElementById("duelModal");
-  if (!modal) return;
+    const modal = document.getElementById("duelModal");
+    if (!modal) return;
 
-  modal.classList.add("is-hidden");
-  modal.setAttribute("aria-hidden", "true");
+    modal.classList.add("is-hidden");
+    modal.setAttribute("aria-hidden", "true");
 
-  // Optional: restore scroll
-  document.body.classList.remove("modal-open");
+    // Optional: restore scroll
+    document.body.classList.remove("modal-open");
 
-  // Clean UI content so stale duel info doesn't flash next time
-  const body = document.getElementById("dBody");
-  if (body) body.innerHTML = "";
+    // Clean UI content so stale duel info doesn't flash next time
+    const body = document.getElementById("dBody");
+    if (body) body.innerHTML = "";
 
-  const feedback = document.getElementById("dFeedback");
-  if (feedback) feedback.textContent = "";
+    const feedback = document.getElementById("dFeedback");
+    if (feedback) feedback.textContent = "";
 }
 
 // Optional convenience: show a message inside duel modal
 function setDuelFeedback(msg) {
-  const el = document.getElementById("dFeedback");
-  if (!el) return;
-  el.textContent = msg || "";
+    const el = document.getElementById("dFeedback");
+    if (!el) return;
+    el.textContent = msg || "";
 }
 
 function renderDuelUI(duel, gameState) {
@@ -914,6 +941,10 @@ function updateBoardUI(state) {
     if (!state) return;
     const container = document.getElementById("board-tiles");
     if (!container) return;
+    const tokenLayer = document.getElementById("token-layer");
+    if (tokenLayer && tokenLayer.parentNode === container) {
+        container.removeChild(tokenLayer);
+    }
 
     const tilesRaw = Array.isArray(state.tiles) ? state.tiles : [];
     const playersRaw = Array.isArray(state.players) ? state.players : [];
@@ -953,20 +984,20 @@ function updateBoardUI(state) {
         const type = (tile.type || tile.tile_type || "empty").toLowerCase();
 
         if (!label) {
-        switch (type) {
-            case "start":     label = "Start"; break;
-            case "finish":    label = "Finish"; break;
-            case "trap":      label = "Trap"; break;
-            case "heal":      label = "Heal"; break;
-            case "bonus":     label = "Bonus"; break;
-            case "question":  label = "?"; break;
-            case "warp":      label = "Warp"; break;
-            case "mass_warp": label = "Mass Warp"; break;
-            case "duel":      label = "Duel"; break;
-            case "shop":      label = "Shop"; break;
-            default:          label = ""; break;
-            case "portal":    label = "Portal"; break;
-        }
+            switch (type) {
+                case "start": label = "Start"; break;
+                case "finish": label = "Finish"; break;
+                case "trap": label = "Trap"; break;
+                case "heal": label = "Heal"; break;
+                case "bonus": label = "Bonus"; break;
+                case "question": label = "?"; break;
+                case "warp": label = "Warp"; break;
+                case "mass_warp": label = "Mass Warp"; break;
+                case "duel": label = "Duel"; break;
+                case "shop": label = "Shop"; break;
+                case "portal": label = "Portal"; break;
+                default: label = ""; break;
+            }
         }
 
         /* --- BONUS TILE HTML (🎁 + corner badge) --- */
@@ -994,6 +1025,7 @@ function updateBoardUI(state) {
     }).join("");
 
     container.innerHTML = html || "<div>No tiles.</div>";
+    if (tokenLayer) container.appendChild(tokenLayer);
 }
 
 // ---------- UI: players panel ----------
@@ -1107,10 +1139,10 @@ function updateDiceUI(state) {
 
     const diceDisplay = document.getElementById("dice-display");
     if (diceText && (!diceDisplay || !diceDisplay.dataset.hasValue)) {
-      const currentName = current && current.username ? current.username : null;
-      diceText.textContent = isYourTurn
-        ? "It is your turn. Roll the dice."
-        : (currentName ? `Waiting for ${currentName} to roll.` : "Waiting for the current player to roll.");
+        const currentName = current && current.username ? current.username : null;
+        diceText.textContent = isYourTurn
+            ? "It is your turn. Roll the dice."
+            : (currentName ? `Waiting for ${currentName} to roll.` : "Waiting for the current player to roll.");
     }
 }
 
@@ -1118,55 +1150,55 @@ function updateDiceUI(state) {
 // ---------- Support Cards (inventory) ----------
 
 async function useCard(gameId, cardId, targetPlayerId = null) {
-  const payload = { card_id: cardId };
-  if (targetPlayerId !== null) payload.target_player_id = targetPlayerId;
+    const payload = { card_id: cardId };
+    if (targetPlayerId !== null) payload.target_player_id = targetPlayerId;
 
-  const resp = await fetch(`/games/${gameId}/use_card/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-      "X-CSRFToken": getCookie("csrftoken") || "",
-    },
-    body: JSON.stringify(payload),
-  });
+    const resp = await fetch(`/games/${gameId}/use_card/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": getCookie("csrftoken") || "",
+        },
+        body: JSON.stringify(payload),
+    });
 
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) {
-    alert(data.detail || `Error ${resp.status}`);
-    return;
-  }
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+        alert(data.detail || `Error ${resp.status}`);
+        return;
+    }
 
-  const state = data.game_state || data;
+    const state = data.game_state || data;
 
-  updateBoardUI(state);
-  updatePlayersUI(state);
-  updateDiceUI(state);
-  renderPlayerTokens(state);
-  renderQuestionUI(state);
-  renderInventoryUI(state);
+    updateBoardUI(state);
+    updatePlayersUI(state);
+    updateDiceUI(state);
+    renderPlayerTokens(state);
+    renderQuestionUI(state);
+    renderInventoryUI(state);
 }
 
 function renderInventoryUI(state) {
-  const wrap = document.getElementById("inventory-cards");
-  if (!wrap) return;
+    const wrap = document.getElementById("inventory-cards");
+    if (!wrap) return;
 
-  const shieldEl = document.getElementById("inv-shield");
-  const extraEl = document.getElementById("inv-extra-rolls");
+    const shieldEl = document.getElementById("inv-shield");
+    const extraEl = document.getElementById("inv-extra-rolls");
 
-  if (shieldEl) shieldEl.textContent = state.you_shield_points ?? 0;
-  if (extraEl) extraEl.textContent = state.you_extra_rolls ?? 0;
+    if (shieldEl) shieldEl.textContent = state.you_shield_points ?? 0;
+    if (extraEl) extraEl.textContent = state.you_extra_rolls ?? 0;
 
     const cards = Array.isArray(state.your_cards) ? state.your_cards : [];
 
-  if (cards.length === 0) {
-    wrap.innerHTML = `<div class="muted">No cards</div>`;
-    return;
-  }
+    if (cards.length === 0) {
+        wrap.innerHTML = `<div class="muted">No cards</div>`;
+        return;
+    }
 
-  wrap.innerHTML = cards
-    .map(
-      (c) => `
+    wrap.innerHTML = cards
+        .map(
+            (c) => `
       <div class="inv-card">
         <div class="inv-card-title">${escapeHtml(c.name)}</div>
         <div class="inv-card-desc">${escapeHtml(c.description || "")}</div>
@@ -1177,49 +1209,50 @@ function renderInventoryUI(state) {
         </button>
       </div>
     `
-    )
-    .join("");
+        )
+        .join("");
 
-  wrap.querySelectorAll(".inv-use-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const cardId = btn.getAttribute("data-card-id");
-      const effect = btn.getAttribute("data-effect");
-      const gameId = window.GAME_ID;
+    wrap.querySelectorAll(".inv-use-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const cardId = btn.getAttribute("data-card-id");
+            const effect = btn.getAttribute("data-effect");
+            const gameId = window.GAME_ID;
 
-      // swap_position needs target player (adjacent)
-      if (effect === "swap_position") {
-        const players = Array.isArray(state.players) ? state.players : [];
-        const me = players.find((p) => p.is_you);
-        if (!me) {
-          alert("Could not identify your player.");
-          return;
-        }
+            // swap_position needs target player (adjacent)
+            if (effect === "swap_position") {
+                const players = Array.isArray(state.players) ? state.players : [];
+                const me = players.find((p) => p.is_you);
+                if (!me) {
+                    alert("Could not identify your player.");
+                    return;
+                }
 
-        const adjacent = players.filter(
-          (p) =>
-            !p.is_you &&
-            p.is_alive &&
-            (p.position === me.position - 1 || p.position === me.position + 1)
-        );
+                const adjacent = players.filter(
+                    (p) =>
+                        !p.is_you &&
+                        p.is_alive &&
+                        (p.position === me.position - 1 || p.position === me.position + 1)
+                );
 
-        if (adjacent.length === 0) {
-          alert("No adjacent player to swap with.");
-          return;
-        }
+                if (adjacent.length === 0) {
+                    alert("No adjacent player to swap with.");
+                    return;
+                }
 
-        // simplest: swap with first adjacent
-        useCard(gameId, cardId, adjacent[0].id);
-        return;
-      }
+                // simplest: swap with first adjacent
+                useCard(gameId, cardId, adjacent[0].id);
+                return;
+            }
 
-      useCard(gameId, cardId);
+            useCard(gameId, cardId);
+        });
     });
-  });
 }
 
 // ---------- fetch state ----------
 
 async function fetchGameState(gameId) {
+    if (BQ_IS_ANIMATING) return;
     try {
         const resp = await fetch(`/games/${gameId}/state/`, {
             headers: { "X-Requested-With": "XMLHttpRequest" }
@@ -1227,6 +1260,7 @@ async function fetchGameState(gameId) {
         if (!resp.ok) return;
 
         const data = await resp.json();
+        window.GAME_STATE = data;
 
         updateBoardUI(data);
         updatePlayersUI(data);
@@ -1235,7 +1269,6 @@ async function fetchGameState(gameId) {
         renderInventoryUI(data);
         renderQuestionUI(data);
         renderDraftUI(data);
-
 
         if (data.pending_duel) {
             showDuelModal();
@@ -1247,8 +1280,8 @@ async function fetchGameState(gameId) {
             hideDuelModal();
         }
 
-        if (data.pending_shop){
-          showShopModal(data.pending_shop, data);
+        if (data.pending_shop) {
+            showShopModal(data.pending_shop, data);
         }
         else hideShopModal();
 
@@ -1271,21 +1304,21 @@ async function fetchGameState(gameId) {
 
 // ---------- roll ----------
 function startDiceShuffle() {
-  const { die } = getDiceEls();
-  if (!die) return null;
+    const { die } = getDiceEls();
+    if (!die) return null;
 
-  let alive = true;
-  const interval = setInterval(() => {
-    if (!alive) return;
-    const v = 1 + Math.floor(Math.random() * 6);
-    toggleDiceClasses(die);
-    die.dataset.roll = String(v);
-  }, 90);
+    let alive = true;
+    const interval = setInterval(() => {
+        if (!alive) return;
+        const v = 1 + Math.floor(Math.random() * 6);
+        toggleDiceClasses(die);
+        die.dataset.roll = String(v);
+    }, 90);
 
-  return () => {
-    alive = false;
-    clearInterval(interval);
-  };
+    return () => {
+        alive = false;
+        clearInterval(interval);
+    };
 }
 async function handleRollClick(e) {
     e.preventDefault();
@@ -1300,8 +1333,11 @@ async function handleRollClick(e) {
     if (rollButton) rollButton.disabled = true;
     if (diceDisplay) diceDisplay.dataset.hasValue = "1";
     if (diceText) diceText.textContent = "Rolling...";
+
     const stopShuffle = startDiceShuffle();
 
+    let state = null;
+    let move = null;
 
     try {
         const resp = await fetch(`/games/${gameId}/roll/`, {
@@ -1318,7 +1354,7 @@ async function handleRollClick(e) {
             try {
                 const errData = await resp.json();
                 if (errData.detail) msg = errData.detail;
-            } catch (_) {}
+            } catch (_) { }
             if (diceDisplay) diceDisplay.textContent = msg;
             fetchGameState(gameId);
             if (typeof stopShuffle === "function") stopShuffle();
@@ -1328,20 +1364,20 @@ async function handleRollClick(e) {
         const data = await resp.json();
         const result = data.result || data.action || {};
         const dice = result.dice;
-        const move = result.move || {};
-        const state = data.game_state;
+
+        move = result.move || {};
+        state = data.game_state || null;
 
         if (typeof stopShuffle === "function") stopShuffle();
 
         if (typeof dice !== "undefined") {
-          // animate to the final server value
-          animateDieTo(Number(dice));
-          if (diceText) diceText.textContent = `You rolled ${dice}.`;
+            animateDieTo(Number(dice));
+            if (diceText) diceText.textContent = `You rolled ${dice}.`;
         }
 
         if (logEl && move) {
-            const from = move.from_position;
-            const to = move.to_position;
+            const from = Number(move.from_position);
+            const to = Number(move.to_position);
             const tileType = move.landed_tile_type;
             const tileEffect = move.tile_effect || {};
 
@@ -1363,14 +1399,72 @@ async function handleRollClick(e) {
             logEl.prepend(p);
         }
 
-        if (state) {
-            updateBoardUI(state);
-            updatePlayersUI(state);
-            updateDiceUI(state);
-            renderPlayerTokens(state);
-            renderQuestionUI(state);
-            renderInventoryUI(state);
+        if (!state) return;
+
+        window.GAME_STATE = state;
+
+        updateBoardUI(state);
+
+        document.body.offsetHeight;
+
+        const fromPos = Number(move?.from_position);
+        const toPos = Number(move?.to_position);
+        const pid = state.you_player_id;
+
+        if (
+            pid &&
+            Number.isFinite(fromPos) &&
+            Number.isFinite(toPos) &&
+            typeof animateStepMove === "function"
+        ) {
+            snapAllTokensToState(state, false);
+            const me = state.players.find(p => p.id === pid);
+            if (me) {
+                const token = getOrCreateToken(me, state);
+                const startTile = document.querySelector(`.board-tile[data-position="${fromPos}"]`);
+                const board = document.getElementById("board-tiles");
+
+                if (token && startTile && board) {
+                    // compute start coords first
+                    const r = getTileRectRelativeToBoard(startTile, board);
+                    const x = r.x + r.w / 2 - 13;
+                    const y = r.y + r.h / 2 - 13;
+
+                    // snap instantly to the FROM tile (no transition)
+                    token.classList.remove("token-anim");
+                    token.style.transitionDuration = "0ms";
+                    token.style.transform =
+                        `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) translateY(var(--stack-offset, 0))`;
+
+                    // force a paint so the browser commits the start position
+                    await nextFrame();
+
+                    // now allow animations again
+                    token.style.transitionDuration = "";
+                }
+            }
+
+
+
+            BQ_IS_ANIMATING = true;
+            try {
+                await nextFrame();
+                await animateStepMove(state, pid, fromPos, toPos, 220);
+            } finally {
+                BQ_IS_ANIMATING = false;
+            }
         }
+
+        // Final UI updates
+        updatePlayersUI(state);
+        updateDiceUI(state);
+
+        // Ensure everyone is exactly where they belong (corrects any animation drift)
+        snapAllTokensToState(state, false);
+
+        renderQuestionUI(state);
+        renderInventoryUI(state);
+
     } catch (e) {
         console.error("roll error:", e);
         const diceDisplay = document.getElementById("dice-display");
@@ -1380,6 +1474,198 @@ async function handleRollClick(e) {
 }
 
 // ---------- tokens ----------
+
+let BQ_IS_ANIMATING = false;
+let BQ_TOKEN_LAYER = null;
+let BQ_TOKEN_ELEMS = new Map(); // playerId -> HTMLElement
+let BQ_LAST_POSITIONS = new Map(); // playerId -> number
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function ensureTokenLayer() {
+    if (BQ_TOKEN_LAYER && document.body.contains(BQ_TOKEN_LAYER)) return BQ_TOKEN_LAYER;
+
+    const board = document.getElementById("board-tiles");
+    if (!board) return null;
+
+    let layer = document.getElementById("token-layer");
+    if (!layer) {
+        layer = document.createElement("div");
+        layer.id = "token-layer";
+        layer.className = "token-layer";
+        board.appendChild(layer);
+    }
+    BQ_TOKEN_LAYER = layer;
+    return layer;
+}
+
+function getTileRectRelativeToBoard(tileEl, boardEl) {
+    const t = tileEl.getBoundingClientRect();
+    const b = boardEl.getBoundingClientRect();
+    return { x: t.left - b.left, y: t.top - b.top, w: t.width, h: t.height };
+}
+
+function getTokenOffset(idx) {
+    // Small offsets so multiple players on same tile don't overlap.
+    const offsets = [
+        { dx: 0, dy: 0 },
+        { dx: 12, dy: -6 },
+        { dx: -12, dy: -6 },
+        { dx: 12, dy: 10 },
+        { dx: -12, dy: 10 },
+        { dx: 0, dy: -14 },
+    ];
+    return offsets[idx % offsets.length];
+}
+
+function setTokenPosition(tokenEl, x, y, animate = true) {
+    if (!tokenEl) return;
+    tokenEl.classList.toggle("token-anim", !!animate);
+    tokenEl.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) translateY(var(--stack-offset, 0))`;
+}
+
+function getOrCreateToken(player, gameState) {
+    const layer = ensureTokenLayer();
+    if (!layer) return null;
+
+    const id = String(player.id);
+    let el = BQ_TOKEN_ELEMS.get(id);
+
+    if (!el || !document.body.contains(el)) {
+        el = document.createElement("div");
+        el.className = "player-token player-token-abs";
+        el.dataset.playerId = id;
+        el.textContent = getPlayerInitials(player);
+        layer.appendChild(el);
+        BQ_TOKEN_ELEMS.set(id, el);
+    }
+
+    el.classList.toggle(
+        "player-token-current",
+        !!(gameState.current_player_id && String(gameState.current_player_id) === id)
+    );
+    el.classList.toggle("player-token-you", !!player.is_you);
+    el.classList.toggle("player-token-dead", player.is_alive === false);
+
+    return el;
+}
+
+function computeTileOccupancy(players) {
+    const byPos = {};
+    players.forEach((p) => {
+        const pos = typeof p.position === "number" ? p.position : 0;
+        if (!byPos[pos]) byPos[pos] = [];
+        byPos[pos].push(p);
+    });
+    return byPos;
+}
+
+function snapAllTokensToState(gameState, animate = false) {
+    if (!gameState || !Array.isArray(gameState.players)) return;
+
+    const board = document.getElementById("board-tiles");
+    if (!board) return;
+
+    ensureTokenLayer();
+
+    // Dedup players
+    const seen = new Set();
+    const players = [];
+    for (const p of gameState.players) {
+        if (!seen.has(p.id)) {
+            seen.add(p.id);
+            players.push(p);
+        }
+    }
+
+    const byPos = computeTileOccupancy(players);
+
+    players.forEach((p) => {
+        const pos = typeof p.position === "number" ? p.position : 0;
+        const tile = document.querySelector(`.board-tile[data-position="${pos}"]`);
+        if (!tile) return;
+        if (tile.classList.contains("board-tile-portal")) return;
+
+        const token = getOrCreateToken(p, gameState);
+        if (!token) return;
+
+        const idx = (byPos[pos] || []).findIndex((pp) => pp.id === p.id);
+        const off = getTokenOffset(Math.max(0, idx));
+        const r = getTileRectRelativeToBoard(tile, board);
+
+        // Center inside tile (token size ~ 26px, so subtract ~13px)
+        const x = r.x + r.w / 2 - 13 + off.dx;
+        const y = r.y + r.h / 2 - 13 + off.dy;
+
+        setTokenPosition(token, x, y, animate);
+        BQ_LAST_POSITIONS.set(String(p.id), pos);
+    });
+
+    // Remove tokens for players no longer present
+    for (const [pid, el] of BQ_TOKEN_ELEMS.entries()) {
+        if (!players.some((p) => String(p.id) === String(pid))) {
+            try { el.remove(); } catch (_) { }
+            BQ_TOKEN_ELEMS.delete(pid);
+            BQ_LAST_POSITIONS.delete(pid);
+        }
+    }
+}
+
+async function animateStepMove(gameState, playerId, fromPos, toPos, stepMs = 220) {
+    if (!gameState || !Array.isArray(gameState.players)) return;
+
+    const board = document.getElementById("board-tiles");
+    if (!board) return;
+
+    ensureTokenLayer();
+
+    const p = gameState.players.find((pp) => String(pp.id) === String(playerId));
+    if (!p) return;
+
+    const token = getOrCreateToken(p, gameState);
+    if (!token) return;
+
+    // Big jumps = teleport → just snap
+    if (Math.abs(toPos - fromPos) > 10) return;
+
+    const dir = toPos >= fromPos ? 1 : -1;
+
+    // Make sure transition class is on and duration matches stepMs
+    token.classList.add("token-anim");
+    token.style.transitionDuration = `${stepMs}ms`;
+
+    for (let pos = fromPos; pos !== toPos; pos += dir) {
+        const nextPos = pos + dir;
+        const tile = document.querySelector(`.board-tile[data-position="${nextPos}"]`);
+        if (!tile) break;
+        if (tile.classList.contains("board-tile-portal")) continue;
+
+        const r = getTileRectRelativeToBoard(tile, board);
+        const players = gameState.players || [];
+        const byPos = computeTileOccupancy(players);
+        const idx = (byPos[nextPos] || []).findIndex(pp => String(pp.id) === String(playerId));
+        const off = getTokenOffset(Math.max(0, idx));
+
+        const x = r.x + r.w / 2 - 13 + off.dx;
+        const y = r.y + r.h / 2 - 13 + off.dy;
+
+        // Critical: give the browser a frame boundary before applying the new transform
+        await nextFrame();
+
+        // Keep your translateY(var(--stack-offset)) so CSS matches snap positioning
+        token.style.transform =
+            `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) translateY(var(--stack-offset, 0))`;
+        token.classList.remove("token-anim");
+        token.style.transitionDuration = "";
+        // Wait for the actual end of transition (not a timer guess)
+        await waitForTransformTransition(token, stepMs);
+    }
+
+    BQ_LAST_POSITIONS.set(String(playerId), toPos);
+}
+
 
 function getPlayerInitials(player) {
     const name = (player.username || "").trim();
@@ -1392,69 +1678,8 @@ function getPlayerInitials(player) {
 }
 
 function renderPlayerTokens(gameState) {
-    if (!gameState || !Array.isArray(gameState.players)) return;
-
-    // FIX: Deduplicate players for token rendering
-    const seenIds = new Set();
-    const uniquePlayers = [];
-    for (const p of gameState.players) {
-        if (!seenIds.has(p.id)) {
-            seenIds.add(p.id);
-            uniquePlayers.push(p);
-        }
-    }
-
-    // Clear existing tokens
-    const tiles = document.querySelectorAll(".board-tile");
-    tiles.forEach(tile => {
-        const tokenContainer = tile.querySelector(".tile-tokens");
-        if (tokenContainer) {
-            tokenContainer.innerHTML = "";
-        }
-    });
-
-    // Build mapping: tileIndex -> [players]
-    const playersByTile = {};
-    uniquePlayers.forEach(player => {
-        const pos = typeof player.position === "number" ? player.position : 0;
-        if (!playersByTile[pos]) {
-            playersByTile[pos] = [];
-        }
-        playersByTile[pos].push(player);
-    });
-
-    // Render tokens into each tile
-    Object.entries(playersByTile).forEach(([tileIndex, players]) => {
-        // ... (keep existing token DOM creation)
-        const tile = document.querySelector(
-            `.board-tile[data-position="${tileIndex}"]`
-        );
-        if (tile && tile.classList.contains("board-tile-portal")) {
-            return;
-        }
-        if (!tile) return;
-
-        let tokenContainer = tile.querySelector(".tile-tokens");
-        if (!tokenContainer) {
-            tokenContainer = document.createElement("div");
-            tokenContainer.classList.add("tile-tokens");
-            tile.appendChild(tokenContainer);
-        }
-
-        players.forEach((player, idx) => {
-            const token = document.createElement("div");
-            token.classList.add("player-token");
-
-            if (gameState.current_player_id &&
-                String(gameState.current_player_id) === String(player.id)) {
-                token.classList.add("player-token-current");
-            }
-
-            token.style.setProperty("--token-index", idx);
-            token.textContent = getPlayerInitials(player);
-            tokenContainer.appendChild(token);
-        });
-    });
+    if (BQ_IS_ANIMATING) return;
+    snapAllTokensToState(gameState, false);
 }
 
 
@@ -1467,37 +1692,40 @@ document.addEventListener("DOMContentLoaded", function () {
     window.gamePoller = setInterval(function () {
         fetchGameState(window.GAME_ID);
     }, 2000);
+    window.addEventListener("resize", () => {
+        if (window.GAME_STATE) snapAllTokensToState(window.GAME_STATE, false);
+    });
 
     const rollBtn = document.getElementById("roll-button");
     if (rollBtn) rollBtn.addEventListener("click", handleRollClick);
 });
 function bqOpenFinishModal(state) {
-  const modal = document.getElementById("finishModal");
-  const tbody = document.getElementById("finishLeaderboardBody");
-  const closeBtn = document.getElementById("finishCloseBtn");
-  const backBtn = document.getElementById("backToLobbyBtn");
+    const modal = document.getElementById("finishModal");
+    const tbody = document.getElementById("finishLeaderboardBody");
+    const closeBtn = document.getElementById("finishCloseBtn");
+    const backBtn = document.getElementById("backToLobbyBtn");
 
-  if (!modal || !tbody) return;
+    if (!modal || !tbody) return;
 
-  // Back button fallback if you prefer JS redirect
-  if (backBtn && window.BQ_LOBBY_URL) {
-    backBtn.href = window.BQ_LOBBY_URL;
-  }
+    // Back button fallback if you prefer JS redirect
+    if (backBtn && window.BQ_LOBBY_URL) {
+        backBtn.href = window.BQ_LOBBY_URL;
+    }
 
-  // Render leaderboard
-  tbody.innerHTML = "";
+    // Render leaderboard
+    tbody.innerHTML = "";
 
-  const lb = (state && state.leaderboard) ? state.leaderboard : [];
-  lb.forEach(row => {
-    const status = (row.status || "").toLowerCase();
-    const pillClass =
-      status === "winner" ? "winner" :
-      status === "eliminated" ? "eliminated" : "alive";
+    const lb = (state && state.leaderboard) ? state.leaderboard : [];
+    lb.forEach(row => {
+        const status = (row.status || "").toLowerCase();
+        const pillClass =
+            status === "winner" ? "winner" :
+                status === "eliminated" ? "eliminated" : "alive";
 
-    const tr = document.createElement("tr");
-    if (row.rank === 1 || status === "winner") tr.classList.add("bq-row-winner");
+        const tr = document.createElement("tr");
+        if (row.rank === 1 || status === "winner") tr.classList.add("bq-row-winner");
 
-    tr.innerHTML = `
+        tr.innerHTML = `
       <td>${row.rank ?? ""}</td>
       <td>${escapeHtml(row.username ?? "")}</td>
       <td>${row.position ?? ""}</td>
@@ -1506,32 +1734,32 @@ function bqOpenFinishModal(state) {
       <td><span class="bq-pill ${pillClass}">${escapeHtml(row.status ?? "")}</span></td>
     `;
 
-    tbody.appendChild(tr);
-  });
+        tbody.appendChild(tr);
+    });
 
-  // Show modal
-  modal.classList.remove("bq-hidden");
-  modal.setAttribute("aria-hidden", "false");
+    // Show modal
+    modal.classList.remove("bq-hidden");
+    modal.setAttribute("aria-hidden", "false");
 
-  // Close handlers
-  const close = () => {
-    modal.classList.add("bq-hidden");
-    modal.setAttribute("aria-hidden", "true");
-  };
+    // Close handlers
+    const close = () => {
+        modal.classList.add("bq-hidden");
+        modal.setAttribute("aria-hidden", "true");
+    };
 
-  if (closeBtn) closeBtn.onclick = close;
+    if (closeBtn) closeBtn.onclick = close;
 
-  // Close when clicking backdrop (not the card)
-  modal.onclick = (e) => {
-    if (e.target === modal) close();
-  };
+    // Close when clicking backdrop (not the card)
+    modal.onclick = (e) => {
+        if (e.target === modal) close();
+    };
 
-  // ESC key closes
-  document.addEventListener("keydown", function escHandler(ev) {
-    if (ev.key === "Escape") {
-      close();
-      document.removeEventListener("keydown", escHandler);
-    }
-  });
+    // ESC key closes
+    document.addEventListener("keydown", function escHandler(ev) {
+        if (ev.key === "Escape") {
+            close();
+            document.removeEventListener("keydown", escHandler);
+        }
+    });
 }
 

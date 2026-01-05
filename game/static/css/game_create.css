@@ -10,9 +10,8 @@
 .gc-card {
     border-radius: 20px;
     background: radial-gradient(circle at top left,
-        rgba(148, 163, 184, 0.26),
-        rgba(15, 23, 42, 0.96)
-    );
+            rgba(148, 163, 184, 0.26),
+            rgba(15, 23, 42, 0.96));
     border: 1px solid rgba(148, 163, 184, 0.38);
     box-shadow: 0 20px 32px rgba(0, 0, 0, 0.6);
     padding: 1.2rem 1.1rem 1.1rem;
@@ -22,9 +21,8 @@
 
 .gc-card-side {
     background: radial-gradient(circle at top right,
-        rgba(59, 130, 246, 0.22),
-        rgba(15, 23, 42, 0.96)
-    );
+            rgba(59, 130, 246, 0.22),
+            rgba(15, 23, 42, 0.96));
 }
 
 .gc-title {
@@ -145,20 +143,20 @@
 }
 
 .checkbox-grid ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
 }
 
 .checkbox-grid li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(148,163,184,0.25);
-  background: rgba(2,6,23,0.35);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(2, 6, 23, 0.35);
 }

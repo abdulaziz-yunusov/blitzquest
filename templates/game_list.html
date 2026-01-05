@@ -9,117 +9,115 @@
 
 {% block content %}
 <div class="gl-page">
-    <section class="gl-header-card">
-        <div class="gl-header-left">
-            <h2 class="gl-title">Games</h2>
-            <p class="gl-subtitle">
-                Create a new lobby or join one that is waiting for players.
-                You can also re-open games you are already part of.
-            </p>
-        </div>
-        <div class="gl-header-actions">
-            <a href="{% url 'game:game_create' %}" class="btn btn-primary gl-main-btn">
-                Create new game
-            </a>
-            <a href="{% url 'game:game_join' %}" class="btn btn-secondary gl-sec-btn">
-                Join with code
-            </a>
-        </div>
-    </section>
+  <section class="gl-header-card">
+    <div class="gl-header-left">
+      <h2 class="gl-title">Games</h2>
+      <p class="gl-subtitle">
+        Create a new lobby or join one that is waiting for players.
+        You can also re-open games you are already part of.
+      </p>
+    </div>
+    <div class="gl-header-actions">
+      <a href="{% url 'game:game_create' %}" class="btn btn-primary gl-main-btn">
+        Create new game
+      </a>
+      <a href="{% url 'game:game_join' %}" class="btn btn-secondary gl-sec-btn">
+        Join with code
+      </a>
+    </div>
+  </section>
 
-    <section class="gl-layout">
-        <!-- Waiting games -->
-        <div class="gl-panel">
-            <div class="gl-panel-header">
-                <h3>Waiting games</h3>
-                <span class="gl-counter">
-                    {{ waiting_games.count }} lobby{{ waiting_games.count|pluralize }}
-                </span>
+  <section class="gl-layout">
+    <!-- Waiting games -->
+    <div class="gl-panel">
+      <div class="gl-panel-header">
+        <h3>Waiting games</h3>
+        <span class="gl-counter">
+          {{ waiting_games.count }} lobby{{ waiting_games.count|pluralize }}
+        </span>
+      </div>
+
+      {% if waiting_games %}
+      <ul class="gl-game-list">
+        {% for g in waiting_games %}
+        <li class="gl-game-row">
+          <div class="gl-game-main">
+            <div class="gl-game-avatar">{{ g.code|slice:":2" }}</div>
+            <div class="gl-game-text">
+              <div class="gl-game-title">
+                Game {{ g.code }}
+              </div>
+              <div class="gl-game-meta">
+                {{ g.get_mode_display }} mode •
+                {{ g.players.count }}/{{ g.max_players }} players •
+                created {{ g.created_at|timesince }} ago
+              </div>
             </div>
+          </div>
+          <div class="gl-game-actions">
+            <a href="{% url 'game:game_detail' g.id %}" class="btn btn-secondary gl-game-open">
+              Open
+            </a>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="gl-empty">
+        No waiting games right now. Create one and share the code with your friends.
+      </p>
+      {% endif %}
+    </div>
 
-            {% if waiting_games %}
-                <ul class="gl-game-list">
-                    {% for g in waiting_games %}
-                        <li class="gl-game-row">
-                            <div class="gl-game-main">
-                                <div class="gl-game-avatar">{{ g.code|slice:":2" }}</div>
-                                <div class="gl-game-text">
-                                    <div class="gl-game-title">
-                                        Game {{ g.code }}
-                                    </div>
-                                    <div class="gl-game-meta">
-                                        {{ g.get_mode_display }} mode •
-                                        {{ g.players.count }}/{{ g.max_players }} players •
-                                        created {{ g.created_at|timesince }} ago
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="gl-game-actions">
-                                <a href="{% url 'game:game_detail' g.id %}" class="btn btn-secondary gl-game-open">
-                                    Open
-                                </a>
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="gl-empty">
-                    No waiting games right now. Create one and share the code with your friends.
-                </p>
-            {% endif %}
-        </div>
+    <!-- My games -->
+    <div class="gl-panel">
+      <div class="gl-panel-header">
+        <h3>My games</h3>
+        <span class="gl-counter">
+          {{ my_games.count }} game{{ my_games.count|pluralize }}
+        </span>
+      </div>
 
-        <!-- My games -->
-        <div class="gl-panel">
-            <div class="gl-panel-header">
-                <h3>My games</h3>
-                <span class="gl-counter">
-                    {{ my_games.count }} game{{ my_games.count|pluralize }}
-                </span>
+      {% if my_games %}
+      <ul class="gl-game-list">
+        {% for g in my_games %}
+        <li class="gl-game-row gl-game-row-compact">
+          <div class="gl-game-main">
+            <div class="gl-status-dot gl-status-{{ g.status }}"></div>
+            <div class="gl-game-text">
+              <div class="gl-game-title">
+                {{ g.code }} – {{ g.get_status_display }}
+              </div>
+              <div class="gl-game-meta">
+                {{ g.get_mode_display }} mode •
+                {{ g.players.count }}/{{ g.max_players }} players
+              </div>
             </div>
+          </div>
+          <div class="gl-game-actions">
+            <a href="{% url 'game:game_detail' g.id %}" class="btn btn-secondary gl-game-open">
+              Open
+            </a>
 
-            {% if my_games %}
-                <ul class="gl-game-list">
-                    {% for g in my_games %}
-                        <li class="gl-game-row gl-game-row-compact">
-                            <div class="gl-game-main">
-                                <div class="gl-status-dot gl-status-{{ g.status }}"></div>
-                                <div class="gl-game-text">
-                                    <div class="gl-game-title">
-                                        {{ g.code }} – {{ g.get_status_display }}
-                                    </div>
-                                    <div class="gl-game-meta">
-                                        {{ g.get_mode_display }} mode •
-                                        {{ g.players.count }}/{{ g.max_players }} players
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="gl-game-actions">
-                                <a href="{% url 'game:game_detail' g.id %}" class="btn btn-secondary gl-game-open">
-                                    Open
-                                </a>
-
-                                {% if g.host == request.user %}
-                                <form action="{% url 'game:game_delete' g.id %}"
-                                    method="post"
-                                    class="delete-form"
-                                    onsubmit="return confirm('Delete game {{ g.code }}?');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline-small gl-delete-btn">
-                                        Delete
-                                    </button>
-                                </form>
-                                {% endif %}
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="gl-empty">
-                    You are not in any games yet. Join a lobby or create your first game.
-                </p>
+            {% if g.host == request.user %}
+            <form action="{% url 'game:game_delete' g.id %}" method="post" class="delete-form"
+              onsubmit="return confirm('Delete game {{ g.code }}?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-small gl-delete-btn">
+                Delete
+              </button>
+            </form>
             {% endif %}
-        </div>
-    </section>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="gl-empty">
+        You are not in any games yet. Join a lobby or create your first game.
+      </p>
+      {% endif %}
+    </div>
+  </section>
 </div>
 {% endblock %}

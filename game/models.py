@@ -517,12 +517,15 @@ class Game(models.Model):
 
         start_pos = player.position
 
+        # ---------- NO EFFECT ----------
         if t == BoardTile.TileType.SAFE or t == BoardTile.TileType.START:
             return effects
         
+        # ---------- MOVE ----------
         if tile.tile_type == BoardTile.TileType.PORTAL:
             return {"type": "portal", "skipped": True}
 
+        # ---------- TRAP ----------
         if t == BoardTile.TileType.TRAP:
             hp_delta = value if value is not None else cfg.get("hp_delta", -1)
             if hp_delta == 0:
@@ -533,7 +536,8 @@ class Game(models.Model):
             damage = abs(int(hp_delta))
             self.apply_damage(player, damage, effects, source="trap")
             return effects
-
+        
+        # ---------- HEAL ----------
         if t == BoardTile.TileType.HEAL:
             hp_delta = value if value is not None else cfg.get("hp_delta", 1)
             if hp_delta == 0:
@@ -545,6 +549,7 @@ class Game(models.Model):
             player.save(update_fields=["hp"])
             return effects
 
+        # ---------- BONUS ----------
         if t == BoardTile.TileType.BONUS:
             active_types = list(SupportCardType.objects.filter(is_active=True))
             if not active_types:
@@ -584,6 +589,7 @@ class Game(models.Model):
             effects["extra"]["question_triggered"] = True
             return effects
 
+        # ---------- WARP ----------
         if t == BoardTile.TileType.WARP:
             board_size = int(effects["extra"].get("board_size") or 0)
             if not board_size:
@@ -611,6 +617,7 @@ class Game(models.Model):
             })
             return effects
 
+        # ---------- MASS WARP ----------
         if t == BoardTile.TileType.MASS_WARP:
             if ctx.get("mass_warp_fired"):
                 effects["extra"]["mass_warp"] = {"skipped": True, "reason": "mass_warp_already_fired"}
@@ -679,6 +686,7 @@ class Game(models.Model):
             effects["position_set"] = player.position
             return effects
 
+        # ---------- DUEL ----------
         if t == BoardTile.TileType.DUEL:
             # Pause the game and start duel via UI.
             if not self.pending_duel:
@@ -709,8 +717,9 @@ class Game(models.Model):
             effects["extra"]["duel_triggered"] = True
             return effects
 
+        # ---------- SHOP ----------
         if t == BoardTile.TileType.SHOP:
-            # Pause the game and open the shop UI. Purchases/sales happen via API.
+            # Pause the game and open the shop UI.
             if not self.pending_shop:
                 shop_level = int(cfg.get("shop_level", 1) or 1)
                 shop_level = max(1, min(shop_level, 3))
@@ -755,6 +764,7 @@ class Game(models.Model):
             effects["extra"]["shop_triggered"] = True
             return effects
 
+        # ---------- FINISH ----------
         if t == BoardTile.TileType.FINISH:
             return effects
 
