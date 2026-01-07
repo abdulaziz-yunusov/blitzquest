@@ -57,6 +57,109 @@ async function safeJson(res) {
         return null;
     }
 }
+// -----------------------------
+// Activity Log (global, via polling diffs)
+// -----------------------------
+window.BQ_ACTIVITY = window.BQ_ACTIVITY || {
+  lastPlayers: new Map(), // playerId -> { position, hp, coins }
+  seenKeys: new Set(),    // to prevent duplicates
+};
+
+function tileByPosition(state, pos) {
+  if (!state || !Array.isArray(state.tiles)) return null;
+  // tiles payload includes { position, type, type_display, ... }
+  return state.tiles.find(t => t.position === pos) || null;
+}
+
+function playerColorClass(player) {
+  // stable color by turn order (or fallback by id)
+  const idx = (typeof player.turn_order === "number" ? player.turn_order : (player.id || 0)) % 6;
+  return `act-p${idx}`;
+}
+
+function appendActivityLine({ player, text }) {
+  const logEl = document.getElementById("dice-log");
+  if (!logEl) return;
+
+  const p = document.createElement("p");
+  p.className = "act-line";
+
+  const name = document.createElement("span");
+  name.className = `act-name ${playerColorClass(player)}`;
+  name.textContent = player.username || "Player";
+
+  const msg = document.createElement("span");
+  msg.className = "act-msg";
+  msg.textContent = ` ${text}`;
+
+  p.appendChild(name);
+  p.appendChild(msg);
+
+  logEl.prepend(p);
+}
+
+function updateActivityFromStateDiff(prevState, nextState) {
+  if (!nextState || !Array.isArray(nextState.players)) return;
+
+  // If first run, just snapshot (no spam)
+  if (!prevState || !Array.isArray(prevState.players)) {
+    window.BQ_ACTIVITY.lastPlayers.clear();
+    for (const p of nextState.players) {
+      window.BQ_ACTIVITY.lastPlayers.set(p.id, {
+        position: p.position,
+        hp: p.hp,
+        coins: p.coins,
+      });
+    }
+    return;
+  }
+
+  const prevMap = window.BQ_ACTIVITY.lastPlayers;
+
+  for (const p of nextState.players) {
+    const old = prevMap.get(p.id);
+    if (!old) continue;
+
+    const moved = old.position !== p.position;
+    const hpDelta = (p.hp ?? 0) - (old.hp ?? 0);
+    const coinsDelta = (p.coins ?? 0) - (old.coins ?? 0);
+
+    if (!moved && hpDelta === 0 && coinsDelta === 0) continue;
+
+    const landedTile = moved ? tileByPosition(nextState, p.position) : null;
+
+    let text = "";
+    if (moved) {
+      text = `moved ${old.position} → ${p.position}`;
+      if (landedTile) {
+        const typeLabel = landedTile.type_display || landedTile.type || "";
+        if (typeLabel) text += ` (landed: ${typeLabel})`;
+      }
+    } else {
+      text = `updated stats`;
+    }
+
+    if (hpDelta !== 0) text += ` | HP ${hpDelta > 0 ? `+${hpDelta}` : hpDelta}`;
+    if (coinsDelta !== 0) text += ` | Coins ${coinsDelta > 0 ? `+${coinsDelta}` : coinsDelta}`;
+
+    // Dedup key so the same diff doesn’t get appended twice
+    const key = `${p.id}|${old.position}->${p.position}|hp${hpDelta}|c${coinsDelta}`;
+    if (!window.BQ_ACTIVITY.seenKeys.has(key)) {
+      window.BQ_ACTIVITY.seenKeys.add(key);
+      appendActivityLine({ player: p, text });
+    }
+  }
+
+  // Update snapshot
+  prevMap.clear();
+  for (const p of nextState.players) {
+    prevMap.set(p.id, {
+      position: p.position,
+      hp: p.hp,
+      coins: p.coins,
+    });
+  }
+}
 
 function getDiceEls() {
     return {
@@ -1328,6 +1431,9 @@ async function fetchGameState(gameId) {
 
         const data = await resp.json();
 
+        updateActivityFromStateDiff(window.GAME_STATE || null, data);
+        window.GAME_STATE = data; 
+
         updateBoardUI(data);
         updatePlayersUI(data);
         updateDiceUI(data);
@@ -1439,29 +1545,29 @@ async function handleRollClick(e) {
             if (diceText) diceText.textContent = `You rolled ${dice}.`;
         }
 
-        if (logEl && move) {
-            const from = move.from_position;
-            const to = move.to_position;
-            const tileType = move.landed_tile_type;
-            const tileEffect = move.tile_effect || {};
+        // if (logEl && move) {
+        //     const from = move.from_position;
+        //     const to = move.to_position;
+        //     const tileType = move.landed_tile_type;
+        //     const tileEffect = move.tile_effect || {};
 
-            let text = `Moved from ${from} to ${to}.`;
-            if (tileType) text += ` Landed on ${tileType}.`;
-            if (tileEffect.hp_delta) {
-                text += ` HP ${tileEffect.hp_delta > 0 ? "+" + tileEffect.hp_delta : tileEffect.hp_delta}.`;
-            }
-            if (tileEffect.coins_delta) {
-                text += ` Coins ${tileEffect.coins_delta > 0 ? "+" + tileEffect.coins_delta : tileEffect.coins_delta}.`;
-            }
-            if (tileEffect.extra && tileEffect.extra.died) text += " You died.";
-            if (tileEffect.extra && tileEffect.extra.opponent_died) text += " Opponent died.";
-            if (move.teleported) {
-                text += " 🌀 Teleported to Start!";
-            }
-            const p = document.createElement("p");
-            p.textContent = text;
-            logEl.prepend(p);
-        }
+        //     let text = `Moved from ${from} to ${to}.`;
+        //     if (tileType) text += ` Landed on ${tileType}.`;
+        //     if (tileEffect.hp_delta) {
+        //         text += ` HP ${tileEffect.hp_delta > 0 ? "+" + tileEffect.hp_delta : tileEffect.hp_delta}.`;
+        //     }
+        //     if (tileEffect.coins_delta) {
+        //         text += ` Coins ${tileEffect.coins_delta > 0 ? "+" + tileEffect.coins_delta : tileEffect.coins_delta}.`;
+        //     }
+        //     if (tileEffect.extra && tileEffect.extra.died) text += " You died.";
+        //     if (tileEffect.extra && tileEffect.extra.opponent_died) text += " Opponent died.";
+        //     if (move.teleported) {
+        //         text += " 🌀 Teleported to Start!";
+        //     }
+        //     const p = document.createElement("p");
+        //     p.textContent = text;
+        //     logEl.prepend(p);
+        // }
 
         if (state) {
             updateBoardUI(state);

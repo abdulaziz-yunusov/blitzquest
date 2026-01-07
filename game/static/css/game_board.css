@@ -726,6 +726,27 @@
 .dice-log p {
   margin: 0 0 0.25rem 0;
 }
+.dice-log .act-line {
+  margin: 0 0 0.25rem 0;
+  line-height: 1.25rem;
+}
+
+.dice-log .act-name {
+  font-weight: 700;
+}
+
+.dice-log .act-msg {
+  opacity: 0.95;
+}
+
+/* 6 distinct player colors (stable by turn_order) */
+.dice-log .act-name.act-p0 { color: #60a5fa; } /* blue */
+.dice-log .act-name.act-p1 { color: #34d399; } /* green */
+.dice-log .act-name.act-p2 { color: #fbbf24; } /* amber */
+.dice-log .act-name.act-p3 { color: #f87171; } /* red */
+.dice-log .act-name.act-p4 { color: #a78bfa; } /* purple */
+.dice-log .act-name.act-p5 { color: #22d3ee; } /* cyan */
+
 
 /* ===== Finish Modal ===== */
 
