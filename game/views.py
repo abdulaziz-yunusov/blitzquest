@@ -1440,29 +1440,30 @@ def duel_skip(request, game_id: int):
     if game.status != Game.Status.ACTIVE:
         return JsonResponse({"detail": "Game is not active."}, status=400)
 
-    me = game.players.select_related("user").filter(user=request.user).first()
-    if not me:
-        return JsonResponse({"detail": "You are not a player in this game."}, status=403)
+    me = _get_me(game, request)
+    if me is None:
+        return JsonResponse({"detail": "You are not in this game."}, status=403)
 
     pd = getattr(game, "pending_duel", None)
     if not pd:
-        return JsonResponse({"detail": "No active duel."}, status=400)
+        return JsonResponse({"detail": "No pending duel."}, status=400)
 
-    # Only the duel initiator (for_player_id) can skip
-    if pd.get("for_player_id") != me.id:
-        return JsonResponse({"detail": "It is not your action."}, status=403)
+    # Only a duel participant (or initiator) can skip/close it
+    initiator_id = pd.get("initiator_id") or pd.get("for_player_id")
+    opponent_id = pd.get("opponent_id")
 
-    # Allow skip only if there are no valid opponents alive
-    alive_other_exists = game.players.filter(is_alive=True).exclude(id=me.id).exists()
-    if alive_other_exists:
-        return JsonResponse({"detail": "You cannot skip: there are available opponents."}, status=409)
+    participants = {str(x) for x in [initiator_id, opponent_id] if x}
+    if str(me.id) not in participants:
+        return JsonResponse({"detail": "It is not your duel."}, status=403)
 
+    # Clear duel and skip/advance turn (same behavior style as gun_skip)
     game.pending_duel = None
     game.save(update_fields=["pending_duel"])
-    game.advance_turn()
+
+    # Prefer your helper (handles end_turn if you have it)
+    _end_turn_safely(game)
 
     return JsonResponse({
         "action": "duel_skip",
         "game_state": game.to_public_state(for_user=request.user),
     })
-
