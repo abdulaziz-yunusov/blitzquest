@@ -1113,13 +1113,14 @@ def _compute_scores(a_choice, a_pred, b_choice, b_pred):
 
 
 def _end_turn_safely(game):
-    # Use your existing method if present
-    if hasattr(game, "end_turn") and callable(getattr(game, "end_turn")):
-        game.end_turn()
+    """Advance turn while skipping eliminated players."""
+    if hasattr(game, "advance_turn") and callable(getattr(game, "advance_turn")):
+        game.advance_turn()
         return
-    # Fallback: advance index
-    game.current_turn_index = (game.current_turn_index + 1) % max(game.players.count(), 1)
+
+    game.current_turn_index = (int(game.current_turn_index or 0) + 1) % max(game.players.count(), 1)
     game.save(update_fields=["current_turn_index"])
+
 
 
 def _apply_hp_damage_with_shield(player, dmg: int) -> bool:

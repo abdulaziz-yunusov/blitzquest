@@ -92,18 +92,49 @@ class Game(models.Model):
         """
         return self.players.order_by("turn_order")
 
+    def sync_turn_to_alive_player(self) -> bool:
+        """Ensure `current_turn_index` points to an alive player.
+
+        Fixes cases where a player is eliminated out of turn, but turn index
+        still points at them. Does not override pending modal locks.
+        """
+        if self.pending_question or self.pending_shop or self.pending_duel or self.pending_gun:
+            return False
+
+        players = list(self.players_by_turn_order)
+        if not players:
+            return False
+
+        n = len(players)
+        start = int(self.current_turn_index or 0) % n
+
+        for step in range(n):
+            idx = (start + step) % n
+            if getattr(players[idx], "is_alive", True):
+                if idx != self.current_turn_index:
+                    self.current_turn_index = idx
+                    self.save(update_fields=["current_turn_index"])
+                    return True
+                return False
+
+        # No alive players left
+        self.status = Game.Status.FINISHED
+        self.save(update_fields=["status"])
+        return True
+
+
     @property
     def current_player(self):
-        """
-        Player whose turn it is, based on current_turn_index.
-        Returns None if no players yet.
-        """
+        # Keep the turn on a living player to avoid "dead player" turns.
+        self.sync_turn_to_alive_player()
+
         players = list(self.players_by_turn_order)
         if not players:
             return None
 
-        index = self.current_turn_index % len(players)
+        index = int(self.current_turn_index or 0) % len(players)
         return players[index]
+
     
     class SurvivalDifficulty(models.TextChoices):
         EASY = "easy", "Easy"
