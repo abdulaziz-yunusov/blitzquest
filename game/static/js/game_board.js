@@ -599,35 +599,36 @@ function showGunModal(pendingGun, state) {
   const fb = document.getElementById("gunFeedback");
   if (fb) fb.textContent = "";
 
+  // ✅ Bind close/cancel EVERY time (or once) BEFORE any early return
+  (function bindGunModalButtonsOnce() {
+    const x = document.getElementById("gunCloseBtn");
+    const c = document.getElementById("gunCancelBtn");
+
+    if (x && !x.dataset.bound) {
+      x.dataset.bound = "1";
+      x.addEventListener("click", skipGunAndClose);
+    }
+    if (c && !c.dataset.bound) {
+      c.dataset.bound = "1";
+      c.addEventListener("click", skipGunAndClose);
+    }
+  })();
+
   const targets = (pendingGun && Array.isArray(pendingGun.targets)) ? pendingGun.targets : [];
   if (!wrap) return;
 
+  // ✅ If no targets, still allow Exit/Cancel to work (skipGunAndClose)
   if (!targets.length) {
     wrap.innerHTML = `<div class="muted">No available targets.</div>`;
     return;
   }
-  (function bindGunModalButtonsOnce(){
-        const x = document.getElementById("gunCloseBtn");
-        const c = document.getElementById("gunCancelBtn");
-
-        if (x && !x.dataset.bound) {
-            x.dataset.bound = "1";
-            x.addEventListener("click", skipGunAndClose);
-        }
-        if (c && !c.dataset.bound) {
-            c.dataset.bound = "1";
-            c.addEventListener("click", skipGunAndClose);
-        }
-    })();
-
 
   wrap.innerHTML = targets.map(t => `
-     <button type="button" class="gun-target" data-gun-target="${t.id}">
+    <button type="button" class="gun-target" data-gun-target="${t.id}">
       <div class="name">${escapeHtml(t.username)}</div>
       <div class="hp">HP: ${t.hp}</div>
     </button>
   `).join("");
-
 
   wrap.querySelectorAll("[data-gun-target]").forEach(btn => {
     btn.addEventListener("click", async () => {
@@ -647,13 +648,39 @@ function showGunModal(pendingGun, state) {
           if (fb) fb.textContent = (data && data.detail) ? data.detail : "Failed.";
           return;
         }
-        await applyGameStateUpdate(data); // expects {game_state:...}
+        await applyGameStateUpdate(data);
       } catch {
         if (fb) fb.textContent = "Network error.";
       }
     });
   });
 }
+async function skipDuelAndClose() {
+  const gid = getGameIdFromPage();
+
+  try {
+    const res = await fetch(`/games/${gid}/duel/skip/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken(),
+      },
+      body: JSON.stringify({}),
+    });
+
+    const data = await safeJson(res);
+    if (res.ok) {
+      await applyGameStateUpdate(data);
+      hideDuelModal();
+      return;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  hideDuelModal();
+}
+
 
 function hideGunModal() {
   const modal = document.getElementById("gunModal");
@@ -1015,6 +1042,8 @@ function renderDuelUI(duel, gameState) {
         const p = players.find(x => x.id === pid);
         return p ? p.username : `Player ${pid}`;
     };
+    const headerRight = document.getElementById("dHeaderRight");
+    if (headerRight) headerRight.innerHTML = "";
 
     // -------------------------
     // Phase: choose opponent
@@ -1026,58 +1055,76 @@ function renderDuelUI(duel, gameState) {
         `;
         const grid = body.querySelector(".dgrid");
 
+        let added = 0;
+
         players.forEach(p => {
             if (!p.is_alive || p.id === myId) return;
+            added++;
+
             const btn = document.createElement("button");
             btn.className = "dbtn";
             btn.innerHTML = `<strong>${p.username}</strong><br><small>HP ${p.hp} • Coins ${p.coins}</small>`;
             btn.onclick = async () => {
-                try {
-                    // UI feedback
-                    if (feedback) feedback.textContent = "Selecting opponent...";
-                    btn.disabled = true;
+            try {
+                if (feedback) feedback.textContent = "Selecting opponent...";
+                btn.disabled = true;
 
-                    const res = await fetch(`/games/${gameState.id}/duel/select_opponent/`, {
-                        method: "POST",
-                        headers: {
-                            "X-Requested-With": "XMLHttpRequest",
-                            "X-CSRFToken": getCSRFToken(),
-                            "Content-Type": "application/x-www-form-urlencoded",
-                        },
-                        body: `opponent_id=${encodeURIComponent(p.id)}`
-                    });
+                const res = await fetch(`/games/${gameState.id}/duel/select_opponent/`, {
+                method: "POST",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": getCSRFToken(),
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: `opponent_id=${encodeURIComponent(p.id)}`
+                });
 
-                    const payload = await safeJson(res);
+                const payload = await safeJson(res);
 
-                    if (!res.ok) {
-                        const msg = (payload && (payload.detail || payload.error)) ? (payload.detail || payload.error) : `Error ${res.status}`;
-                        if (feedback) feedback.textContent = msg;
-                        btn.disabled = false;
-                        return;
-                    }
-
-                    // Apply new server state immediately (no waiting for poll)
-                    await applyGameStateUpdate(payload);
-
-                    // If duel is still pending, re-render duel UI right now
-                    const st = payload && payload.game_state ? payload.game_state : null;
-                    if (st && st.pending_duel) {
-                        showDuelModal();
-                        renderDuelUI(st.pending_duel, st);
-                    }
-
-                    if (feedback) feedback.textContent = "";
-                } catch (e) {
-                    console.error(e);
-                    if (feedback) feedback.textContent = "Network error while selecting opponent.";
-                    btn.disabled = false;
+                if (!res.ok) {
+                const msg = (payload && (payload.detail || payload.error)) ? (payload.detail || payload.error) : `Error ${res.status}`;
+                if (feedback) feedback.textContent = msg;
+                btn.disabled = false;
+                return;
                 }
+
+                await applyGameStateUpdate(payload);
+
+                const st = payload && payload.game_state ? payload.game_state : null;
+                if (st && st.pending_duel) {
+                showDuelModal();
+                renderDuelUI(st.pending_duel, st);
+                }
+
+                if (feedback) feedback.textContent = "";
+            } catch (e) {
+                console.error(e);
+                if (feedback) feedback.textContent = "Network error while selecting opponent.";
+                btn.disabled = false;
+            }
             };
 
             grid.appendChild(btn);
         });
+
+        // ✅ no available players -> show Exit (skip duel + advance turn)
+        if (added === 0) {
+            const headerRight = document.getElementById("dHeaderRight");
+            if (headerRight) {
+            headerRight.innerHTML = `<button type="button" class="gun-x" id="dExitBtn" aria-label="Close">✕</button>`;
+            const exitBtn = document.getElementById("dExitBtn");
+            if (exitBtn) exitBtn.onclick = skipDuelAndClose;
+            }
+
+            body.innerHTML = `
+            <h4 class="dsection-title">Duel</h4>
+            <p class="qfeedback">No available opponents.</p>
+            `;
+        }
+
         return;
     }
+
 
     // -------------------------
     // Phase: commit (hidden)
@@ -1250,15 +1297,18 @@ function updateBoardUI(state) {
         const pb = typeof b.position === "number" ? b.position : 0;
         return pa - pb;
     });
+    
+    const boardLen = Number(state.board_length || tilesRaw.length || 0);
+    const lastPos = boardLen > 0 ? (boardLen - 1) : (tilesRaw.length - 1);
 
     const html = tiles.map(tile => {
         const pos = typeof tile.position === "number" ? tile.position : 0;
         const tPlayers = playersByPos[pos] || [];
         const hasCurrent = tPlayers.some(p => p.is_current_turn);
-
+        
         let label = tile.label || "";
         const type = (tile.type || tile.tile_type || "empty").toLowerCase();
-
+        
         if (!label) {
             switch (type) {
                 case "start": label = "Start"; break;
@@ -1276,10 +1326,10 @@ function updateBoardUI(state) {
                 default: label = ""; break;
             }
         }
-
+        
         /* --- BONUS TILE HTML (🎁 + corner badge) --- */
         let labelHtml = escapeHtml(label);
-
+        
         if (type === "bonus") {
             labelHtml = `<div class="board-tile-symbol">🎁</div>`;
         }
@@ -1293,10 +1343,13 @@ function updateBoardUI(state) {
         // ... (keep rest of tile map logic)
         const tileClasses = ["board-tile", `board-tile-${type}`];
         if (hasCurrent) tileClasses.push("board-tile-current");
+        let indexText = String(pos);
+        if (type === "start" || pos === 0) indexText = "S";
+        if (type === "finish" || pos === lastPos) indexText = "F";
 
         return `
             <div class="${tileClasses.join(" ")}" data-position="${pos}">
-                <div class="board-tile-index">${pos + 1}</div>
+                <div class="board-tile-index">${indexText}</div>
                 <div class="board-tile-label">${labelHtml}</div>
                 <div class="board-tile-players"></div>
                 <div class="tile-tokens"></div>
@@ -1310,75 +1363,146 @@ function updateBoardUI(state) {
 // ---------- UI: players panel ----------
 
 function updatePlayersUI(state) {
-    if (!state) return;
+  // RIGHT BOX = Rankings only
+  if (!state) return;
 
-    const listEl = document.getElementById("player-list");
-    const countEl = document.getElementById("player-count");
+  const listEl = document.getElementById("player-list");
+  if (!listEl) return;
 
-    const playersRaw = Array.isArray(state.players) ? state.players : [];
+  const playersRaw = Array.isArray(state.players) ? state.players : [];
 
-    // FIX: Deduplicate players here as well for the sidebar list
-    const seenIds = new Set();
-    const players = [];
-    for (const p of playersRaw) {
-        if (!seenIds.has(p.id)) {
-            seenIds.add(p.id);
-            players.push(p);
-        }
+  // Deduplicate by id
+  const seenIds = new Set();
+  const players = [];
+  for (const p of playersRaw) {
+    if (p && !seenIds.has(p.id)) {
+      seenIds.add(p.id);
+      players.push(p);
     }
+  }
 
-    if (countEl) {
-        const maxPlayers = window.GAME_MAX_PLAYERS || "?";
-        countEl.textContent = `${players.length} / ${maxPlayers}`;
-    }
+  // Ranking rule: POSITION (front = higher rank)
+  // If you want coins/hp-based rank, tell me and I’ll switch the sort.
+  const ranked = players
+    .slice()
+    .sort((a, b) => (b.position ?? 0) - (a.position ?? 0))
+    .map((p, idx) => ({ ...p, rank: idx + 1 }));
 
-    if (!listEl) return;
+  const html = ranked
+    .map((p) => {
+      const r = p.rank; // now always 1..N
+      const badgeClass =
+        r === 1
+          ? "rank-badge gold"
+          : r === 2
+          ? "rank-badge silver"
+          : r === 3
+          ? "rank-badge bronze"
+          : "rank-badge";
 
-    const hostUserId = window.GAME_HOST_USER_ID;
+      const name = (p.username ?? "").toString().trim() || "Player";
 
-    const playersHtml = players.map(p => {
-        // ... (keep existing player row rendering)
-        const isHost = (hostUserId !== null && p.user_id === hostUserId);
-        const isFirstTurnOrder = p.turn_order === 0;
+      return `
+        <li class="rank-row">
+          <div class="rank-left">
+            <div class="${badgeClass}" aria-label="Rank ${r}">${r}</div>
+            <div class="rank-name">
+              ${escapeHtml(name)}
+              ${p.is_you ? '<span class="rank-tag">You</span>' : ""}
+              ${p.is_current_turn ? '<span class="rank-tag turn">Turn</span>' : ""}
+            </div>
+          </div>
+        </li>
+      `;
+    })
+    .join("");
 
-        let rolesHtml = "";
-        if (isHost) rolesHtml += '<span class="player-role">Host</span>';
-        if (isFirstTurnOrder) rolesHtml += '<span class="player-role player-role-turn">Turn order #1</span>';
-        if (p.is_current_turn) rolesHtml += '<span class="player-role player-role-turn">Current turn</span>';
-        if (p.is_you) rolesHtml += '<span class="player-role player-role-you">You</span>';
-
-        const statusBadge = p.is_alive
-            ? '<span class="badge badge-soft">Alive</span>'
-            : '<span class="badge badge-soft badge-soft-danger">Eliminated</span>';
-
-        return `
-            <li class="player-row">
-                <div class="player-main">
-                    <div class="player-avatar">
-                        ${escapeHtml(p.username.charAt(0).toUpperCase())}
-                    </div>
-                    <div class="player-text">
-                        <div class="player-name">
-                            ${escapeHtml(p.username)}
-                            ${rolesHtml}
-                        </div>
-                        <div class="player-meta">
-                            Turn order: ${p.turn_order + 1}
-                        </div>
-                    </div>
-                </div>
-                <div class="player-stats">
-                    <span class="player-stat">HP: <strong>${p.hp}</strong></span>
-                    <span class="player-stat">Coins: <strong>${p.coins}</strong></span>
-                    <span class="player-stat">Pos: <strong>${p.position}</strong></span>
-                    <span class="player-stat">${statusBadge}</span>
-                </div>
-            </li>
-        `;
-    }).join("");
-
-    listEl.innerHTML = playersHtml || "<li>No players.</li>";
+  listEl.innerHTML = html || "<li>No players.</li>";
 }
+
+
+function updatePlayerStatusUI(state) {
+  if (!state) return;
+
+  const wrap = document.getElementById("player-status-body");
+  if (!wrap) return;
+
+  const playersRaw = Array.isArray(state.players) ? state.players : [];
+
+  // Deduplicate by id
+  const seenIds = new Set();
+  const players = [];
+  for (const p of playersRaw) {
+    if (p && !seenIds.has(p.id)) {
+      seenIds.add(p.id);
+      players.push(p);
+    }
+  }
+
+  // Stable order: turn_order if exists
+  players.sort((a, b) => {
+    const ta = typeof a.turn_order === "number" ? a.turn_order : 0;
+    const tb = typeof b.turn_order === "number" ? b.turn_order : 0;
+    return ta - tb;
+  });
+
+  const html = players
+    .map((p) => {
+      const name = (p.username ?? "").toString().trim() || "Player";
+      const initial = name.charAt(0).toUpperCase() || "?";
+
+      const hp = typeof p.hp === "number" ? p.hp : 0;
+      const coins = typeof p.coins === "number" ? p.coins : 0;
+      const pos = typeof p.position === "number" ? p.position : 0;
+
+      const alive = typeof p.is_alive === "boolean" ? p.is_alive : hp > 0;
+
+      return `
+        <div class="ps-item">
+            <div class="ps-left">
+            <div class="ps-avatar">${escapeHtml(initial)}</div>
+
+            <div class="ps-text">
+                <div class="ps-name">
+                ${escapeHtml(name)}
+                ${p.is_you ? '<span class="ps-chip you">You</span>' : ""}
+                ${p.is_current_turn ? '<span class="ps-chip turn">Turn</span>' : ""}
+                </div>
+
+                <div class="ps-sub">
+                <span class="ps-chip ${alive ? "alive" : "dead"}">${alive ? "Alive" : "Dead"}</span>
+                <span class="ps-chip">Pos: <strong>${pos}</strong></span>
+                </div>
+            </div>
+            </div>
+
+            <div class="ps-right">
+            <div class="ps-stat">
+                <div class="ps-stat-label">POS</div>
+                <div class="ps-stat-value">${pos}</div>
+            </div>
+
+            <div class="ps-stat">
+                <div class="ps-stat-label">HP</div>
+                <div class="ps-stat-value">${hp}</div>
+            </div>
+
+            <div class="ps-stat">
+                <div class="ps-stat-label">COINS</div>
+                <div class="ps-stat-value">${coins}</div>
+            </div>
+            </div>
+        </div>
+        `;
+
+    })
+    .join("");
+
+  wrap.innerHTML = html || `<div class="ps-empty">No players.</div>`;
+}
+
+
+
 // ---------- UI: dice / turn ----------
 
 function updateDiceUI(state) {
@@ -1540,12 +1664,16 @@ async function fetchGameState(gameId) {
 
         updateBoardUI(data);
         updatePlayersUI(data);
+        updatePlayerStatusUI(data);
         updateDiceUI(data);
         renderPlayerTokens(data);
         renderInventoryUI(data);
         renderQuestionUI(data);
         renderDraftUI(data);
         renderGunUI(data);
+
+        const pc = document.getElementById("player-count");
+        if (pc) pc.textContent = `${(data.players || []).length} / ${window.GAME_MAX_PLAYERS || ""}`;
 
 
         if (data.pending_duel) {

@@ -33,21 +33,35 @@
 
     <!-- Main layout: big board + right side panel -->
     <section class="board-layout">
-        <aside class="board-inventory">
-            <div class="sidebar-section">
-                <h3>Your inventory</h3>
-                <div class="inventory-meta">
-                <div>Shield: <strong id="inv-shield">0</strong></div>
-                <div>Extra rolls: <strong id="inv-extra-rolls">0</strong></div>
-                </div>
+      <aside class="board-inventory">
 
-                <div id="inventory-cards" class="inventory-cards"></div>
+        <!-- Players status (separate from rankings) -->
+        <div class="sidebar-section">
+          <h3>Players status</h3>
 
-                <div class="inventory-hint">
-                You can use support cards any time.
-                </div>
-            </div>
-        </aside>
+          <div class="player-status-list" id="player-status-body">
+            <!-- Filled by JS -->
+          </div>
+        </div>
+
+        <!-- Inventory -->
+        <div class="sidebar-section">
+          <h3>Your inventory</h3>
+
+          <div class="inventory-meta">
+            <div>Shield: <strong id="inv-shield">0</strong></div>
+            <div>Extra rolls: <strong id="inv-extra-rolls">0</strong></div>
+          </div>
+
+          <div id="inventory-cards" class="inventory-cards"></div>
+
+          <div class="inventory-hint">
+            You can use support cards any time.
+          </div>
+        </div>
+
+      </aside>
+
 
         <!-- MAIN BOARD AREA -->
         <div class="board-main-wrap">
@@ -168,51 +182,25 @@
 
             <!-- Players -->
             <div class="sidebar-section">
-                <h3>Players</h3>
+                <h3>Player Ranks</h3>
                 <div class="sidebar-player-count">
                     <span id="player-count">
                         {{ game.players.count }} / {{ game.max_players }}
                     </span>
                 </div>
                 <ul class="player-list" id="player-list">
-                    {% for p in players %}
-                        <li class="player-row">
-                            <div class="player-main">
-                                <div class="player-avatar">
-                                    {{ p.user.username|first|upper }}
-                                </div>
-                                <div class="player-text">
-                                    <div class="player-name">
-                                        {{ p.user.username }}
-                                        {% if game.host_id == p.user_id %}
-                                            <span class="player-role">Host</span>
-                                        {% endif %}
-                                        {% if forloop.first %}
-                                            <span class="player-role player-role-turn">Turn order #1</span>
-                                        {% endif %}
-                                    </div>
-                                    <div class="player-meta">
-                                        Turn order: {{ p.turn_order|add:1 }}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="player-stats">
-                                <span class="player-stat">HP: <strong>{{ p.hp }}</strong></span>
-                                <span class="player-stat">Coins: <strong>{{ p.coins }}</strong></span>
-                                <span class="player-stat">Pos: <strong>{{ p.position }}</strong></span>
-                                <span class="player-stat">
-                                    {% if p.is_alive %}
-                                        <span class="badge badge-soft">Alive</span>
-                                    {% else %}
-                                        <span class="badge badge-soft badge-soft-danger">Eliminated</span>
-                                    {% endif %}
-                                </span>
-                            </div>
-                        </li>
-                    {% empty %}
-                        <li>No players</li>
-                    {% endfor %}
+                  {% for p in players %}
+                    <li class="rank-row">
+                      <div class="rank-left">
+                        <div class="rank-badge">{{ forloop.counter }}</div>
+                        <div class="rank-name">{{ p.user.username }}</div>
+                      </div>
+                    </li>
+                  {% empty %}
+                    <li>No players</li>
+                  {% endfor %}
                 </ul>
+
             </div>
 
             <!-- Activity log -->

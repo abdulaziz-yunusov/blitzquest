@@ -44,6 +44,8 @@ urlpatterns = [
     path('games/<int:game_id>/duel/predict/', views.duel_predict, name='duel_predict'),
     # duel choose reward endpoint
     path('games/<int:game_id>/duel/choose_reward/', views.duel_choose_reward, name='duel_choose_reward'),
+    # duel skip endpoint
+    path("games/<int:game_id>/duel/skip/", views.duel_skip, name="duel_skip"),
     # draft pick endpoint
     path('games/<int:game_id>/draft/pick/', views.draft_pick, name='draft_pick'),
     # gun attack endpoint

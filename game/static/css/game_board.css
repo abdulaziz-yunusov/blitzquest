@@ -368,7 +368,7 @@
   text-shadow: 0 0 8px rgba(255,60,60,.35);
 }
 
-.gun-x {
+.dmodal .gun-x {
   width: 34px;
   height: 34px;
   border-radius: 10px;
@@ -379,6 +379,11 @@
 }
 .gun-x:hover { background: rgba(255,255,255,.10); }
 
+#dHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 /* ---- Body ---- */
 .gun-sub {
   margin-top: 10px;
@@ -876,6 +881,203 @@
   font-weight: 600;
 }
 
+/* ===== Rankings (right sidebar) ===== */
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10px;
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.35);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.12);
+}
+
+.rank-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rank-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1rem;
+  color: #0b1120;
+  background: linear-gradient(180deg, #e5e7eb, #94a3b8);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  flex: 0 0 auto;
+}
+
+.rank-badge.gold {
+  background: linear-gradient(180deg, #fef08a, #f59e0b);
+}
+
+.rank-badge.silver {
+  background: linear-gradient(180deg, #f1f5f9, #94a3b8);
+}
+
+.rank-badge.bronze {
+  background: linear-gradient(180deg, #fdba74, #c2410c);
+}
+
+.rank-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rank-tag {
+  margin-left: 6px;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+  color: #e5e7eb;
+  font-weight: 600;
+}
+
+.rank-tag.turn {
+  background: rgba(96, 165, 250, 0.16);
+  color: #bfdbfe;
+}
+
+/* ===== Players status (improved list) ===== */
+
+/* ===== Players status (clean card layout) ===== */
+
+.player-status-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+/* card */
+.ps-item{
+  border-radius:16px;
+  padding:14px;
+  background:
+    radial-gradient(circle at 25% 15%, rgba(255,255,255,0.06), transparent 55%),
+    linear-gradient(180deg, rgba(2,6,23,0.70), rgba(2,6,23,0.45));
+  box-shadow: 0 0 0 1px rgba(148,163,184,0.14), 0 14px 30px rgba(0,0,0,0.25);
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:12px;
+}
+
+.ps-left{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+
+.ps-avatar{
+  width:42px;
+  height:42px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  font-weight:800;
+  background: radial-gradient(circle at top left, #4f46e5, #0f172a);
+  box-shadow: 0 10px 16px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.18);
+  flex:0 0 auto;
+}
+
+.ps-text{ min-width:0; }
+
+.ps-name{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:800;
+  font-size:0.98rem;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.ps-sub{
+  margin-top:6px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.ps-chip{
+  font-size:0.72rem;
+  padding:3px 10px;
+  border-radius:999px;
+  background: rgba(148,163,184,0.14);
+  color:#e5e7eb;
+  font-weight:700;
+  line-height:1.2;
+}
+
+.ps-chip.turn{
+  background: rgba(96,165,250,0.18);
+  color:#bfdbfe;
+}
+
+.ps-chip.you{
+  background: rgba(167,139,250,0.18);
+  color:#ddd6fe;
+}
+
+.ps-chip.alive{
+  background: rgba(34,197,94,0.16);
+  color:#bbf7d0;
+}
+
+.ps-chip.dead{
+  background: rgba(239,68,68,0.16);
+  color:#fecaca;
+}
+
+/* stats row */
+.ps-right{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap:10px;
+}
+
+.ps-stat{
+  border-radius:12px;
+  padding:10px 8px;
+  background: rgba(15,23,42,0.40);
+  box-shadow: inset 0 0 0 1px rgba(148,163,184,0.12);
+  text-align:center;
+}
+
+.ps-stat-label{
+  font-size:0.66rem;
+  letter-spacing:0.12em;
+  font-weight:900;
+  color: rgba(226,232,240,0.85);
+}
+
+.ps-stat-value{
+  margin-top:4px;
+  font-size:1.05rem;
+  font-weight:900;
+  color:#ffffff;
+}
+
+/* small screens: keep boxes readable */
+@media (max-width: 420px){
+  .ps-right{ grid-template-columns: 1fr; }
+}
+
+
+
+/* dice log */
 .dice-log {
   max-height: 180px;
   overflow-y: auto;

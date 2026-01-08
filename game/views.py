@@ -1431,3 +1431,38 @@ def duel_choose_reward(request, game_id):
     _end_turn_safely(game)
 
     return _json_ok(game, request, extra={"effects": effects, "resolved": True})
+
+@login_required
+@require_POST
+@transaction.atomic
+def duel_skip(request, game_id: int):
+    game = get_object_or_404(Game, id=game_id)
+    if game.status != Game.Status.ACTIVE:
+        return JsonResponse({"detail": "Game is not active."}, status=400)
+
+    me = game.players.select_related("user").filter(user=request.user).first()
+    if not me:
+        return JsonResponse({"detail": "You are not a player in this game."}, status=403)
+
+    pd = getattr(game, "pending_duel", None)
+    if not pd:
+        return JsonResponse({"detail": "No active duel."}, status=400)
+
+    # Only the duel initiator (for_player_id) can skip
+    if pd.get("for_player_id") != me.id:
+        return JsonResponse({"detail": "It is not your action."}, status=403)
+
+    # Allow skip only if there are no valid opponents alive
+    alive_other_exists = game.players.filter(is_alive=True).exclude(id=me.id).exists()
+    if alive_other_exists:
+        return JsonResponse({"detail": "You cannot skip: there are available opponents."}, status=409)
+
+    game.pending_duel = None
+    game.save(update_fields=["pending_duel"])
+    game.advance_turn()
+
+    return JsonResponse({
+        "action": "duel_skip",
+        "game_state": game.to_public_state(for_user=request.user),
+    })
+
