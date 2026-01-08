@@ -60,7 +60,12 @@
 
 .board-inventory {
   align-self: start;
+
+  display: flex;
+  flex-direction: column;
+  gap: 1rem; /* chap paneldagi bloklar orasidagi masofa */
 }
+
 
 /* ---------- Inventory (Support Cards) ---------- */
 
