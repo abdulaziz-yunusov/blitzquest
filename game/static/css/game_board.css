@@ -1946,44 +1946,6 @@ body.modal-open {
 }
 
 <<<<<<< HEAD
-#orderList .order-row {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:10px 12px;
-  border:1px solid rgba(255,255,255,0.08);
-  border-radius:12px;
-  margin-bottom:8px;
-}
-
-#orderList .order-left {
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-
-#orderList .order-rank {
-  width:28px;
-  height:28px;
-  border-radius:999px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:rgba(255,255,255,0.08);
-  font-weight:700;
-}
-
-#orderList .order-rolls {
-  opacity:0.85;
-  font-size:0.95rem;
-}
-.dice-lg {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto;
-  transform: scale(1.1);
-}
-=======
 /* ============================
    Game Chat (FINAL)
    - background: #020617
@@ -2225,4 +2187,42 @@ body.modal-open {
   .ig-chat-body{ height: 320px; }
 }
 
->>>>>>> 71fc508b9e2c62c5543f54fd7dc06f4919486754
+=======
+#orderList .order-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px;
+  margin-bottom:8px;
+}
+
+#orderList .order-left {
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+#orderList .order-rank {
+  width:28px;
+  height:28px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,0.08);
+  font-weight:700;
+}
+
+#orderList .order-rolls {
+  opacity:0.85;
+  font-size:0.95rem;
+}
+.dice-lg {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto;
+  transform: scale(1.1);
+}
+>>>>>>> 58428d0 (Adding players turn order by dice)
