@@ -1945,7 +1945,6 @@ body.modal-open {
   }
 }
 
-<<<<<<< HEAD
 /* ============================
    Game Chat (FINAL)
    - background: #020617
@@ -2187,7 +2186,6 @@ body.modal-open {
   .ig-chat-body{ height: 320px; }
 }
 
-=======
 #orderList .order-row {
   display:flex;
   justify-content:space-between;
@@ -2225,4 +2223,3 @@ body.modal-open {
   margin: 0 auto;
   transform: scale(1.1);
 }
->>>>>>> 58428d0 (Adding players turn order by dice)

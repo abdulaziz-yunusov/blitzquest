@@ -612,3 +612,69 @@
     display: inline-block;
     box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.8);
 }
+
+/* ============================= */
+/* Turn Order Dice Modal Styles */
+/* ============================= */
+
+#orderModal .qmodal-card {
+    max-width: 420px;
+    width: 100%;
+}
+
+#orderModal .qmodal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Dice + roll button area */
+#orderDiceArea {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0.5rem;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+/* Make modal dice slightly larger */
+#orderDiceArea .bq-dice {
+    transform: scale(1.15);
+}
+
+/* Roll button inside modal */
+#orderRollBtn {
+    min-width: 140px;
+    text-align: center;
+}
+
+/* Order list */
+#orderList {
+    margin-top: 0.25rem;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+/* Order row polish */
+#orderList .order-row {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 12px;
+}
+
+/* Rank circle alignment */
+#orderList .order-rank {
+    background: rgba(148, 163, 184, 0.15);
+}
+
+/* Pending / status text */
+#orderYourStatus {
+    text-align: center;
+    font-size: 0.85rem;
+    opacity: 0.85;
+}
