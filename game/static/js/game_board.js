@@ -1512,6 +1512,25 @@ function updateDiceUI(state) {
 
     if (!state) return;
 
+    // ORDERING phase (turn order roll)
+    if (state.status === "ordering") {
+        const youId = state.you_player_id;
+        const ordering = state.ordering || {};
+        const pending = Array.isArray(ordering.pending_player_ids) ? ordering.pending_player_ids : [];
+        const canRoll = pending.includes(youId);
+
+        if (labelEl) labelEl.textContent = "Rolling for turn order";
+        if (rollButton) rollButton.disabled = !canRoll;
+
+        if (diceText) {
+            diceText.textContent = canRoll
+                ? "Roll to determine turn order."
+                : "Waiting for other players to roll...";
+        }
+        return;
+    }
+
+    // default (non-ordering)
     if (state.status !== "active") {
         if (labelEl) labelEl.textContent = "Game is not active.";
         if (rollButton) rollButton.disabled = true;
@@ -1548,6 +1567,7 @@ function updateDiceUI(state) {
             : (currentName ? `Waiting for ${currentName} to roll.` : "Waiting for the current player to roll.");
     }
 }
+
 
 
 // ---------- Support Cards (inventory) ----------
@@ -1649,6 +1669,104 @@ function renderInventoryUI(state) {
 }
 
 // ---------- fetch state ----------
+function showOrderModal() {
+    const modal = document.getElementById("orderModal");
+    if (!modal) return;
+    modal.classList.remove("is-hidden");
+    modal.setAttribute("aria-hidden", "false");
+}
+
+function hideOrderModal() {
+    const modal = document.getElementById("orderModal");
+    if (!modal) return;
+    modal.classList.add("is-hidden");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function computeProvisionalOrder(state) {
+    const ordering = state.ordering || {};
+    const rh = ordering.roll_history || {};
+    const players = Array.isArray(state.players) ? state.players : [];
+
+    // pid -> sequence tuple
+    const seqs = {};
+    players.forEach(p => {
+        const s = rh[String(p.id)];
+        seqs[p.id] = Array.isArray(s) ? s.map(x => Number(x)) : [];
+    });
+
+    // sort by sequence (lexicographic desc)
+    const sorted = [...players].sort((a, b) => {
+        const A = seqs[a.id] || [];
+        const B = seqs[b.id] || [];
+        const L = Math.max(A.length, B.length);
+        for (let i = 0; i < L; i++) {
+            const av = (A[i] ?? -1);
+            const bv = (B[i] ?? -1);
+            if (av !== bv) return bv - av;
+        }
+        return 0;
+    });
+
+    return { sorted, seqs };
+}
+
+document.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "orderCloseBtn") hideOrderModal();
+});
+document.addEventListener("click", (e) => {
+  if (e.target && e.target.id === "orderRollBtn") {
+    const gameId = window.GAME_ID;
+    handleRollClick(`/games/${gameId}/order_roll/`);
+  }
+});
+
+
+function renderOrderModal(state) {
+    const listEl = document.getElementById("orderList");
+    const youStatusEl = document.getElementById("orderYourStatus");
+    if (!listEl || !state) return;
+
+    const ordering = state.ordering || {};
+    const pending = Array.isArray(ordering.pending_player_ids) ? ordering.pending_player_ids : [];
+    const { sorted, seqs } = computeProvisionalOrder(state);
+
+    // detect ties by exact same seq
+    const keyOf = (pid) => JSON.stringify(seqs[pid] || []);
+    const counts = {};
+    sorted.forEach(p => { counts[keyOf(p.id)] = (counts[keyOf(p.id)] || 0) + 1; });
+
+    listEl.innerHTML = sorted.map((p, idx) => {
+        const rolls = seqs[p.id] || [];
+        const isPending = pending.includes(p.id);
+        const tie = counts[keyOf(p.id)] > 1;
+
+        const rankText = isPending ? "…" : String(idx + 1);
+        const rightText = isPending ? "Pending roll" : (tie ? "TIED (re-roll)" : "OK");
+
+        return `
+          <div class="order-row">
+            <div class="order-left">
+              <div class="order-rank">${rankText}</div>
+              <div>
+                <div><strong>${escapeHtml(p.username)}</strong>${p.is_you ? " (you)" : ""}</div>
+                <div class="order-rolls">Rolls: ${rolls.length ? rolls.join(", ") : "-"}</div>
+              </div>
+            </div>
+            <div class="muted">${rightText}</div>
+          </div>
+        `;
+    }).join("");
+
+    const canRoll = pending.includes(state.you_player_id);
+    const rollBtn = document.getElementById("orderRollBtn");
+    if (rollBtn) {
+        rollBtn.disabled = !canRoll;
+    }
+    if (youStatusEl) {
+        youStatusEl.textContent = canRoll ? "Your turn to roll." : "Wait until you are asked to roll.";
+    }
+}
 
 async function fetchGameState(gameId) {
     try {
@@ -1661,6 +1779,13 @@ async function fetchGameState(gameId) {
 
         updateActivityFromStateDiff(window.GAME_STATE || null, data);
         window.GAME_STATE = data; 
+        
+        if (data.status === "ordering") {
+            showOrderModal();
+            renderOrderModal(data);
+        } else {
+            hideOrderModal();
+        }
 
         updateBoardUI(data);
         updatePlayersUI(data);
@@ -1726,24 +1851,54 @@ function startDiceShuffle() {
         clearInterval(interval);
     };
 }
-async function handleRollClick(e) {
-    e.preventDefault();
+async function handleRollClick(arg) {
+    // arg can be an Event OR a URL string
+    if (arg && typeof arg.preventDefault === "function") arg.preventDefault();
+
     const gameId = window.GAME_ID;
     if (!gameId) return;
 
     const rollButton = document.getElementById("roll-button");
+    const orderRollBtn = document.getElementById("orderRollBtn");
     const diceDisplay = document.getElementById("dice-display");
     const diceText = document.getElementById("dice-text");
-    const logEl = document.getElementById("dice-log");
 
+    const boardDie = document.getElementById("bq-die-1");
+    const orderDie = document.getElementById("orderDie");
+
+    // disable both buttons (sidebar + modal)
     if (rollButton) rollButton.disabled = true;
+    if (orderRollBtn) orderRollBtn.disabled = true;
+
     if (diceDisplay) diceDisplay.dataset.hasValue = "1";
     if (diceText) diceText.textContent = "Rolling...";
-    const stopShuffle = startDiceShuffle();
 
+    // start shuffle animation for BOTH dice
+    const startShuffleFor = (dieEl) => {
+        if (!dieEl) return null;
+        let alive = true;
+        const interval = setInterval(() => {
+            if (!alive) return;
+            const v = 1 + Math.floor(Math.random() * 6);
+            toggleDiceClasses(dieEl);
+            dieEl.dataset.roll = String(v);
+        }, 90);
+
+        return () => {
+            alive = false;
+            clearInterval(interval);
+        };
+    };
+
+    const stopShuffleBoard = startShuffleFor(boardDie);
+    const stopShuffleOrder = startShuffleFor(orderDie);
 
     try {
-        const resp = await fetch(`/games/${gameId}/roll/`, {
+        const urlOverride = (typeof arg === "string") ? arg : null;
+        const isOrdering = window.GAME_STATE && window.GAME_STATE.status === "ordering";
+        const url = urlOverride || (isOrdering ? `/games/${gameId}/order_roll/` : `/games/${gameId}/roll/`);
+
+        const resp = await fetch(url, {
             method: "POST",
             headers: {
                 "X-Requested-With": "XMLHttpRequest",
@@ -1752,47 +1907,68 @@ async function handleRollClick(e) {
             body: new FormData(),
         });
 
+        const data = await safeJson(resp);
+
         if (!resp.ok) {
-            let msg = `Error: ${resp.status}`;
-            try {
-                const errData = await resp.json();
-                if (errData.detail) msg = errData.detail;
-            } catch (_) { }
-            if (diceDisplay) diceDisplay.textContent = msg;
+            const msg = (data && data.detail) ? data.detail : `Error: ${resp.status}`;
+            if (diceText) diceText.textContent = msg;
+
+            if (typeof stopShuffleBoard === "function") stopShuffleBoard();
+            if (typeof stopShuffleOrder === "function") stopShuffleOrder();
+
+            // re-poll to restore correct enabled/disabled states
             fetchGameState(gameId);
-            if (typeof stopShuffle === "function") stopShuffle();
             return;
         }
 
-        const data = await resp.json();
-        const result = data.result || data.action || {};
-        const dice = result.dice;
-        const move = result.move || {};
-        const state = data.game_state;
+        const result = (data && (data.result || data.action)) || {};
+        const dice = Number(result.dice);
+        const state = data && (data.game_state || data);
 
-        if (typeof stopShuffle === "function") stopShuffle();
+        if (typeof stopShuffleBoard === "function") stopShuffleBoard();
+        if (typeof stopShuffleOrder === "function") stopShuffleOrder();
 
-        if (typeof dice !== "undefined") {
-            // animate to the final server value
-            animateDieTo(Number(dice));
+        if (!Number.isNaN(dice)) {
+            // animate both dice to final value
+            if (boardDie) {
+                toggleDiceClasses(boardDie);
+                boardDie.dataset.roll = String(dice);
+            }
+            if (orderDie) {
+                toggleDiceClasses(orderDie);
+                orderDie.dataset.roll = String(dice);
+            }
             if (diceText) diceText.textContent = `You rolled ${dice}.`;
         }
+
         if (state) {
+            window.GAME_STATE = state;
+
             updateBoardUI(state);
             updatePlayersUI(state);
             updateDiceUI(state);
             renderPlayerTokens(state);
-            renderQuestionUI(state);
             renderInventoryUI(state);
+            renderQuestionUI(state);
+            renderDraftUI(state);
             renderGunUI(state);
+
+            if (state.status === "ordering") {
+                showOrderModal();
+                renderOrderModal(state);
+            }
         }
     } catch (e) {
-        console.error("roll error:", e);
-        const diceDisplay = document.getElementById("dice-display");
-        if (typeof stopShuffle === "function") stopShuffle();
-        if (diceDisplay) diceDisplay.textContent = "Error while rolling.";
+        console.error(e);
+
+        if (typeof stopShuffleBoard === "function") stopShuffleBoard();
+        if (typeof stopShuffleOrder === "function") stopShuffleOrder();
+
+        if (diceText) diceText.textContent = "Error while rolling.";
+        fetchGameState(gameId);
     }
 }
+
 
 // ---------- tokens ----------
 

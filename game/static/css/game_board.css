@@ -373,16 +373,38 @@
   text-shadow: 0 0 8px rgba(255,60,60,.35);
 }
 
-.dmodal .gun-x {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.10);
-  color: rgba(255,255,255,.85);
+/* Close (X) button used in Gun + Duel headers */
+.gun-x {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  color: #e5e7eb; 
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+
   cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease, color 0.15s ease;
 }
-.gun-x:hover { background: rgba(255,255,255,.10); }
+
+.gun-x:hover {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fecaca;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+  transform: scale(1.05);
+}
+
+.gun-x:active {
+  transform: scale(0.96);
+}
+
+
 
 #dHeaderRight {
   display: flex;
@@ -1923,6 +1945,7 @@ body.modal-open {
   }
 }
 
+<<<<<<< HEAD
 /* ============================
    Game Chat (FINAL)
    - background: #020617
@@ -2164,3 +2187,42 @@ body.modal-open {
   .ig-chat-body{ height: 320px; }
 }
 
+=======
+#orderList .order-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px;
+  margin-bottom:8px;
+}
+
+#orderList .order-left {
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+#orderList .order-rank {
+  width:28px;
+  height:28px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,0.08);
+  font-weight:700;
+}
+
+#orderList .order-rolls {
+  opacity:0.85;
+  font-size:0.95rem;
+}
+.dice-lg {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto;
+  transform: scale(1.1);
+}
+>>>>>>> 58428d0 (Adding players turn order by dice)

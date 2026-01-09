@@ -555,14 +555,23 @@ def game_start(request, game_id: int):
 
     else:
         # Standard start for Finish Line / Survival
-        game.status = Game.Status.ACTIVE
+        # NEW: go into ORDERING phase to roll for turn order
+        game.status = Game.Status.ORDERING
         game.current_turn_index = 0
 
+        # reset positions
         for player in game.players.all():
             player.position = 0
-            player.save()
+            player.save(update_fields=["position"])
 
-        game.save(update_fields=["status", "current_turn_index"])
+        # init ordering state
+        player_ids = list(game.players.values_list("id", flat=True))
+        game.ordering_state = {
+            "pending_player_ids": player_ids,
+            "roll_history": {str(pid): [] for pid in player_ids},
+        }
+        game.save(update_fields=["status", "current_turn_index", "ordering_state"])
+
 
     messages.success(request, "Game started! Board generated.")
     return redirect("game:game_board", game_id=game.id)
@@ -694,6 +703,104 @@ def game_roll(request, game_id: int):
         "result": action_result,
         "game_state": state,
     })
+
+@login_required
+@require_POST
+@transaction.atomic
+def game_order_roll(request, game_id: int):
+    # Lock row to avoid double-roll race conditions
+    game = Game.objects.select_for_update().get(id=game_id)
+
+    if game.status != Game.Status.ORDERING:
+        return JsonResponse({"detail": "Turn order rolling is not active."}, status=400)
+
+    me = game.players.select_related("user").filter(user=request.user).first()
+    if not me:
+        return JsonResponse({"detail": "You are not in this game."}, status=403)
+
+    st = game.ordering_state or {}
+    pending = list(st.get("pending_player_ids") or [])
+    roll_history = dict(st.get("roll_history") or {})
+
+    # Ensure IDs are ints in pending
+    try:
+        pending = [int(x) for x in pending]
+    except Exception:
+        pending = []
+
+    if me.id not in pending:
+        return JsonResponse({"detail": "You already rolled (or you are not in the pending group)."}, status=400)
+
+    dice = random.randint(1, 6)
+
+    key = str(me.id)
+    if key not in roll_history or not isinstance(roll_history.get(key), list):
+        roll_history[key] = []
+    roll_history[key].append(int(dice))
+
+    # remove from pending
+    pending.remove(me.id)
+
+    st["pending_player_ids"] = pending
+    st["roll_history"] = roll_history
+    game.ordering_state = st
+    game.save(update_fields=["ordering_state"])
+
+    # If round finished, either create a tie reroll group or finalize order
+    if len(pending) == 0:
+        # Build sequences: pid -> tuple([roll1, roll2, ...])
+        seqs = {}
+        for pid_str, seq_list in roll_history.items():
+            try:
+                pid_int = int(pid_str)
+            except Exception:
+                continue
+            if isinstance(seq_list, list):
+                seqs[pid_int] = tuple(int(x) for x in seq_list)
+
+        # Group by identical sequence (ties)
+        groups = {}
+        for pid_int, seq in seqs.items():
+            groups.setdefault(seq, []).append(pid_int)
+
+        tied = []
+        for seq, ids in groups.items():
+            if len(ids) > 1:
+                tied.extend(ids)
+
+        if tied:
+            # Only tied players reroll next
+            st["pending_player_ids"] = tied
+            game.ordering_state = st
+            game.save(update_fields=["ordering_state"])
+
+        else:
+            # FINALIZE: assign turn_order by dice sequence (lexicographic desc)
+            # seqs: {player_id: (roll1, roll2, ...)}
+            final_sorted = sorted(seqs.items(), key=lambda kv: kv[1], reverse=True)
+
+            # Apply turn order (0 = first)
+            for idx, (pid, _seq) in enumerate(final_sorted):
+                game.players.filter(id=pid).update(turn_order=idx)
+
+            # Switch the game to ACTIVE and clear ordering state
+            game.status = Game.Status.ACTIVE
+            game.current_turn_index = 0
+            game.ordering_state = None
+            game.save(update_fields=["status", "current_turn_index", "ordering_state"])
+
+
+
+    # Return state for UI (includes ordering payload if still ordering)
+    state = game.to_public_state(for_user=request.user)
+    state = enrich_draft_options(state)
+
+    return JsonResponse(
+        {
+            "result": {"dice": dice},
+            "game_state": state,
+        }
+    )
 
 @login_required
 @require_POST
@@ -957,7 +1064,7 @@ def game_board(request, game_id: int):
         messages.error(request, "You are not a player in this game.")
         return redirect("game:game_list")
 
-    if game.status not in (Game.Status.ACTIVE, Game.Status.DRAFTING):
+    if game.status not in (Game.Status.ACTIVE, Game.Status.DRAFTING, Game.Status.ORDERING):
         messages.info(request, "Game is not active yet.")
         return redirect("game:game_detail", game_id=game.id)
 

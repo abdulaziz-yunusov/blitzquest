@@ -12,6 +12,7 @@ User = get_user_model()
 class Game(models.Model):
     class Status(models.TextChoices):
         WAITING = "waiting", "Waiting for players"
+        ORDERING = "ordering", "Rolling for turn order"
         DRAFTING = "drafting", "Drafting"
         ACTIVE = "active", "Active"
         FINISHED = "finished", "Finished"
@@ -75,6 +76,8 @@ class Game(models.Model):
 
     # When set, gun is active and MUST be resolved by for_player_id before turn advances
     pending_gun = models.JSONField(null=True, blank=True)
+
+    ordering_state = models.JSONField(null=True, blank=True)
 
 
     def __str__(self) -> str:
@@ -515,6 +518,17 @@ class Game(models.Model):
 
         if self.status == "finished" or self.winner_id is not None:
             payload["leaderboard"] = self.build_leaderboard()
+
+       # --- Turn order rolling phase ---
+        if self.status == self.Status.ORDERING:
+            st = self.ordering_state or {}
+            payload["ordering"] = {
+                "active": True,
+                "pending_player_ids": list(st.get("pending_player_ids") or []),
+                "roll_history": dict(st.get("roll_history") or {}),
+            }
+        else:
+            payload["ordering"] = {"active": False}
 
         return payload
 

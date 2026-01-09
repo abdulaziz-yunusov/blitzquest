@@ -414,6 +414,68 @@
     </div>
   </div>
 </div>
+<!-- Turn order modal -->
+<div id="orderModal" class="qmodal is-hidden" aria-hidden="true">
+  <div class="qmodal-backdrop"></div>
+
+  <div class="qmodal-card" role="dialog" aria-modal="true" aria-labelledby="orderTitle">
+    <div class="qmodal-header">
+      <h3 id="orderTitle">Rolling for turn order</h3>
+      <button type="button" class="qhead-btn" id="orderCloseBtn">Close</button>
+    </div>
+
+    <div class="qmodal-body">
+      <div class="muted" id="orderHint">All players roll. Ties re-roll.</div>
+      <!-- DICE AREA -->
+      <div id="orderDiceArea" style="margin:16px 0; text-align:center;">
+        <div class="bq-dice" style="display:inline-block;">
+          <ol class="bq-die-list even-roll" id="orderDie" data-roll="1" aria-label="Dice">
+            <li class="bq-die-item" data-side="1">
+              <span class="bq-dot"></span>
+            </li>
+
+            <li class="bq-die-item" data-side="2">
+              <span class="bq-dot"></span><span class="bq-dot"></span>
+            </li>
+
+            <li class="bq-die-item" data-side="3">
+              <span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span>
+            </li>
+
+            <li class="bq-die-item" data-side="4">
+              <span class="bq-dot"></span><span class="bq-dot"></span>
+              <span class="bq-dot"></span><span class="bq-dot"></span>
+            </li>
+
+            <li class="bq-die-item" data-side="5">
+              <span class="bq-dot"></span><span class="bq-dot"></span>
+              <span class="bq-dot"></span>
+              <span class="bq-dot"></span><span class="bq-dot"></span>
+            </li>
+
+            <li class="bq-die-item" data-side="6">
+              <span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span>
+              <span class="bq-dot"></span><span class="bq-dot"></span><span class="bq-dot"></span>
+            </li>
+          </ol>
+        </div>
+
+
+
+        <button
+          id="orderRollBtn"
+          class="primary-btn"
+          style="margin-top:12px;"
+        >
+          Roll dice
+        </button>
+      </div>
+      <div style="margin-top:12px;" id="orderList"></div>
+
+      <div style="margin-top:14px;" class="muted" id="orderYourStatus"></div>
+    </div>
+  </div>
+</div>
 
 
 {% endblock %}
