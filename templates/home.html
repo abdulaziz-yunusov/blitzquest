@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}BlitzQuest – Home{% endblock %}
 
@@ -6,6 +7,7 @@
 <section class="hero">
   <div class="hero-left">
     <div class="hero-eyebrow">2–4 Player Online Board Game</div>
+
     <h1 class="hero-title">
       Roll the dice.<br>
       <span class="hero-highlight">Answer fast.</span><br>
@@ -41,6 +43,7 @@
   </div>
 
   <div class="hero-right">
+
     <div class="board-preview-card">
       <div class="board-preview-header">
         <span class="board-preview-title">Board snapshot</span>
@@ -75,10 +78,12 @@
 
 <section class="feature-section">
   <h2 class="section-title">How a match works</h2>
+
   <div class="feature-grid">
     <div class="feature-card">
       <div class="feature-step-label">Step 1</div>
       <h3>Create or join</h3>
+
       <p>
         One player creates a lobby and shares the game code. Up to four players join from any browser.
       </p>
@@ -114,10 +119,12 @@
     <span class="info-label">Players</span>
     <span class="info-value">2–4</span>
   </div>
+
   <div class="info-item">
     <span class="info-label">Tech stack</span>
     <span class="info-value">Django + PostgreSQL / SQLite</span>
   </div>
+
   <div class="info-item">
     <span class="info-label">Mode</span>
     <span class="info-value">Finish line & survival (planned)</span>
