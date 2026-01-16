@@ -258,9 +258,9 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/kjua@0.9.0/dist/kjua.min.js"></script>
 <script>
-    window.GAME_ID = {{ game.id | safe }};
-    window.GAME_HOST_USER_ID = {{ game.host_id |default: "null" | safe }};
-    window.GAME_MAX_PLAYERS = {{ game.max_players | safe }};
+    window.GAME_ID = {{game.id|safe}};
+    window.GAME_HOST_USER_ID = {{game.host_id|default:"null"|safe}};
+    window.GAME_MAX_PLAYERS = {{game.max_players|safe}};
     window.GAME_CODE = "{{ game.code|safe }}";
 
     // Generate QR Code if the QR container exists (only in 'waiting' status)
