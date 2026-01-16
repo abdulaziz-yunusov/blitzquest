@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth import login as auth_login
+from django.contrib.auth import login as auth_login, get_user_model
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 from django.templatetags.static import static
@@ -40,6 +40,41 @@ def signup(request):
         form = UserCreationForm()
 
     return render(request, "registration/signup.html", {"form": form})
+
+
+def password_reset_request(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        User = get_user_model()
+        user = User.objects.filter(username=username).first()
+        if user:
+            request.session["reset_user_id"] = user.id
+            return redirect("game:password_reset_confirm")
+        else:
+            messages.error(request, "User with this username does not exist.")
+    return render(request, "registration/password_reset_request.html")
+
+
+def password_reset_confirm(request):
+    reset_user_id = request.session.get("reset_user_id")
+    if not reset_user_id:
+        return redirect("game:password_reset_request")
+
+    User = get_user_model()
+    user = get_object_or_404(User, id=reset_user_id)
+
+    if request.method == "POST":
+        new_password = request.POST.get("password")
+        if new_password:
+            user.set_password(new_password)
+            user.save()
+            del request.session["reset_user_id"]
+            messages.success(request, "Password updated successfully. Please login.")
+            return redirect("login")
+        else:
+            messages.error(request, "Please enter a new password.")
+
+    return render(request, "registration/password_reset_confirm.html", {"reset_user": user})
 
 
 def generate_game_code(length: int = 6) -> str:
