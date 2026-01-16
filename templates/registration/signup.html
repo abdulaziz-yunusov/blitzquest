@@ -40,10 +40,6 @@
                 {{ field }}
                 {% endif %}
 
-                {% if field.help_text %}
-                <div class="helptext" style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 2px;">{{
-                    field.help_text|safe }}</div>
-                {% endif %}
                 {% for error in field.errors %}
                 <div class="message message-error" style="font-size: 0.8rem; color: #f87171;">
                     {{ error }}
