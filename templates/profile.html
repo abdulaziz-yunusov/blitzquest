@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Profile - BlitzQuest{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-layout-wrapper">
+    <!-- Sidebar -->
+    <aside class="sidebar-v2">
+        <div class="sidebar-logo">
+            <span class="logo-red">BQ</span><span class="logo-white">3</span>
+        </div>
+
+        <div class="sidebar-search">
+            <div class="search-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" placeholder="Search for...">
+            </div>
+        </div>
+
+        <nav class="sidebar-nav-v2">
+            <a href="{% url 'game:home' %}" class="nav-link-v2 active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+                Dashboard
+                <svg class="chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </a>
+            <div class="nav-sub-v2">
+                <a href="#" class="nav-link-v2">Incomes</a>
+                <a href="#" class="nav-link-v2">Expenses</a>
+                <a href="#" class="nav-link-v2">Total Revenue</a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer-user">
+            <div class="sidebar-user-card active">
+                <div class="user-avatar-small">
+                    {% if profile.profile_picture %}
+                    <img src="{{ profile.profile_picture.url }}" alt="Avatar">
+                    {% else %}
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12Z"
+                            fill="currentColor" />
+                        <path d="M12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor" />
+                    </svg>
+                    {% endif %}
+                </div>
+                <div class="user-meta-small">
+                    <p class="user-name-small">{{ user_profile.username }}</p>
+                    <p class="user-sub-small">Account settings</p>
+                </div>
+                <svg class="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content-v2">
+        <header class="content-header-v2">
+            <h2>User</h2>
+        </header>
+
+        <div class="profile-card-v2">
+            <form method="post" enctype="multipart/form-data" class="profile-form-v2">
+                {% csrf_token %}
+
+                <div class="upload-area-v2">
+                    <div class="avatar-large-v2">
+                        {% if profile.profile_picture %}
+                        <img id="profile-preview" src="{{ profile.profile_picture.url }}" alt="Avatar">
+                        {% else %}
+                        <div id="profile-preview-placeholder" class="placeholder-icon-v2">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12Z"
+                                    fill="currentColor" />
+                                <path d="M12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"
+                                    fill="currentColor" />
+                            </svg>
+                        </div>
+                        <img id="profile-preview" style="display:none;" alt="Avatar Preview">
+                        {% endif %}
+                    </div>
+                    <label for="id_profile_picture" class="upload-label-v2">Upload Photo</label>
+                    <input type="file" name="profile_picture" id="id_profile_picture" hidden
+                        onchange="previewImage(this)">
+                </div>
+
+                <div class="form-grid-v2">
+                    <div class="form-field-v2">
+                        <label>First Name</label>
+                        <input type="text" name="first_name" value="{{ user_profile.first_name }}"
+                            placeholder="Enter your first name">
+                    </div>
+                    <div class="form-field-v2">
+                        <label>Last Name</label>
+                        <input type="text" name="last_name" value="{{ user_profile.last_name }}"
+                            placeholder="Enter your last name">
+                    </div>
+                    <div class="form-field-v2">
+                        <label>User Name</label>
+                        <input type="text" name="username" value="{{ user_profile.username }}"
+                            placeholder="Enter your email">
+                    </div>
+                    <div class="form-field-v2">
+                        <label>Password</label>
+                        <input type="password" name="password" placeholder="Enter new password (optional)">
+                    </div>
+                    <div class="form-field-v2">
+                        <label>Date Of Birth</label>
+                        <input type="date" name="birthdate" value="{{ profile.birthdate|date:'Y-m-d' }}"
+                            placeholder="Enter your birthdate">
+                    </div>
+                    <div class="form-field-v2">
+                        <label>Gender</label>
+                        <div class="select-wrapper-v2">
+                            <select name="gender">
+                                <option value="male" {% if profile.gender == 'male' %}selected{% endif %}>Male</option>
+                                <option value="female" {% if profile.gender == 'female' %}selected{% endif %}>Female
+                                </option>
+                            </select>
+                            <svg class="select-icon-v2" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions-v2">
+                    <button type="submit" class="btn-gradient-v2">Add Now</button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<script>
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var img = document.getElementById('profile-preview');
+                img.src = e.target.result;
+                img.style.display = 'block';
+                var placeholder = document.getElementById('profile-preview-placeholder');
+                if (placeholder) placeholder.style.display = 'none';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+</script>
+{% endblock %}

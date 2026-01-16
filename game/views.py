@@ -77,6 +77,71 @@ def password_reset_confirm(request):
     return render(request, "registration/password_reset_confirm.html", {"reset_user": user})
 
 
+@login_required
+def profile(request):
+    user = request.user
+    from .models import Profile
+
+    profile, _ = Profile.objects.get_or_create(user=user)
+
+    if request.method == "POST":
+        first_name = request.POST.get("first_name")
+        last_name = request.POST.get("last_name")
+        username = request.POST.get("username")
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+        birthdate = request.POST.get("birthdate")
+        gender = request.POST.get("gender")
+        profile_pic = request.FILES.get("profile_picture")
+
+        if username and username != user.username:
+            if get_user_model().objects.filter(username=username).exists():
+                messages.error(request, "This username is already taken.")
+            else:
+                user.username = username
+
+        user.first_name = first_name if first_name is not None else user.first_name
+        user.last_name = last_name if last_name is not None else user.last_name
+        user.email = email if email is not None else user.email
+
+        if password:
+            user.set_password(password)
+            user.save()
+            auth_login(request, user)
+        else:
+            user.save()
+
+        if birthdate:
+            profile.birthdate = birthdate
+        if gender:
+            profile.gender = gender
+        if profile_pic:
+            profile.profile_picture = profile_pic
+        profile.save()
+
+        messages.success(request, "Profile updated successfully.")
+        return redirect("game:profile")
+
+    # Stats
+    user_games = PlayerInGame.objects.filter(user=user).select_related("game")
+    total_games = user_games.count()
+    total_wins = Game.objects.filter(winner__user=user).count()
+    win_rate = (total_wins / total_games * 100) if total_games > 0 else 0
+
+    # Match History
+    history = user_games.order_by("-game__created_at")[:10]
+
+    context = {
+        "user_profile": user,
+        "profile": profile,
+        "total_games": total_games,
+        "total_wins": total_wins,
+        "win_rate": round(win_rate, 1),
+        "history": history,
+    }
+    return render(request, "profile.html", context)
+
+
 def generate_game_code(length: int = 6) -> str:
     alphabet = string.ascii_uppercase + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(length))

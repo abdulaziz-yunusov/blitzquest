@@ -41,7 +41,7 @@
 
         <div class="user-nav">
           {% if user.is_authenticated %}
-          <span class="user-greeting">Hi, {{ user.username }}</span>
+          <a href="{% url 'game:profile' %}" class="user-greeting">Hi, {{ user.username }}</a>
           <form method="post" action="{% url 'logout' %}" class="logout-form">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-small">Logout</button>
