@@ -407,43 +407,53 @@ def game_join(request):
         form = JoinGameForm(request.POST)
         if form.is_valid():
             code = form.cleaned_data["code"]
-
-            try:
-                game = Game.objects.get(code__iexact=code)
-            except Game.DoesNotExist:
-                messages.error(request, "Game with this code does not exist.")
-                return redirect("game:game_join")
-
-            if game.status != Game.Status.WAITING:
-                messages.error(request, "This game has already started or finished.")
-                return redirect("game:game_join")
-
-            if PlayerInGame.objects.filter(game=game, user=request.user).exists():
-                messages.info(request, "You are already in this game.")
-                return redirect("game:game_detail", game_id=game.id)
-
-            current_players = game.players.count()
-            if current_players >= game.max_players:
-                messages.error(request, "Game is full.")
-                return redirect("game:game_join")
-
-            PlayerInGame.objects.create(
-                game=game,
-                user=request.user,
-                turn_order=current_players,
-                hp=3,
-                coins=0,
-                position=0,
-                is_alive=True,
-                shield_points=0,
-            )
-
-            messages.success(request, f"You joined game {game.code}.")
-            return redirect("game:game_detail", game_id=game.id)
+            return _join_game_logic(request, code)
     else:
         form = JoinGameForm()
 
     return render(request, "game_join.html", {"form": form})
+
+
+@login_required
+def join_game_by_code(request, code):
+    """Join a game automatically via GET request (e.g., from QR code)."""
+    return _join_game_logic(request, code)
+
+
+def _join_game_logic(request, code):
+    """Centralized logic for joining a game by its code."""
+    try:
+        game = Game.objects.get(code__iexact=code)
+    except Game.DoesNotExist:
+        messages.error(request, "Game with this code does not exist.")
+        return redirect("game:game_join")
+
+    if game.status != Game.Status.WAITING:
+        messages.error(request, "This game has already started or finished.")
+        return redirect("game:game_join")
+
+    if PlayerInGame.objects.filter(game=game, user=request.user).exists():
+        messages.info(request, "You are already in this game.")
+        return redirect("game:game_detail", game_id=game.id)
+
+    current_players = game.players.count()
+    if current_players >= game.max_players:
+        messages.error(request, "Game is full.")
+        return redirect("game:game_join")
+
+    PlayerInGame.objects.create(
+        game=game,
+        user=request.user,
+        turn_order=current_players,
+        hp=3,
+        coins=0,
+        position=0,
+        is_alive=True,
+        shield_points=0,
+    )
+
+    messages.success(request, f"You joined game {game.code}.")
+    return redirect("game:game_detail", game_id=game.id)
 
 
 @login_required

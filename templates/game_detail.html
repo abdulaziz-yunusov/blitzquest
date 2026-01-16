@@ -28,7 +28,7 @@
                     {{ game.get_status_display }}
                 </span>
                 {% if game.status == 'active' %}
-                    <span class="badge badge-soft">Turn: {{ game.current_turn_index|add:1 }}</span>
+                <span class="badge badge-soft">Turn: {{ game.current_turn_index|add:1 }}</span>
                 {% endif %}
             </div>
         </div>
@@ -43,9 +43,9 @@
                     <span class="game-meta-label">Host</span>
                     <span class="game-meta-value">
                         {% if game.host %}
-                            {{ game.host.username }}
+                        {{ game.host.username }}
                         {% else %}
-                            Unknown
+                        Unknown
                         {% endif %}
                     </span>
                 </div>
@@ -58,69 +58,70 @@
             <!-- Inside game_detail.html -> game-header-bottom -->
             <div class="game-actions">
                 {% if game.status == 'waiting' %}
-                    <div class="game-code">
-                        <span class="game-code-label">Lobby code</span>
-                        <span class="game-code-value">{{ game.code }}</span>
-                    </div>
-                    
-                    <div class="game-btn-group">
-                        {% if is_host %}
-                            <div id="host-start-wrap">
-                                {% if players.count >= 2 %}
-                                    <form id="start-game-form" method="post" action="{% url 'game:game_start' game.id %}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-primary">Start game</button>
-                                    </form>
-                                {% else %}
-                                    <div class="game-hint" id="host-wait-hint">
-                                        Waiting for <strong>2+</strong> players...
-                                    </div>
-                                {% endif %}
-                            </div>
+                <div class="game-code">
+                    <span class="game-code-label">Lobby code</span>
+                    <span class="game-code-value">{{ game.code }}</span>
+                </div>
+
+                <div class="game-btn-group">
+                    {% if is_host %}
+                    <div id="host-start-wrap">
+                        {% if players.count >= 2 %}
+                        <form id="start-game-form" method="post" action="{% url 'game:game_start' game.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary">Start game</button>
+                        </form>
+                        {% else %}
+                        <div class="game-hint" id="host-wait-hint">
+                            Waiting for <strong>2+</strong> players...
+                        </div>
                         {% endif %}
                     </div>
+                    {% endif %}
+                </div>
 
                 {% elif game.status == 'ordering' or game.status == 'active' or game.status == 'drafting' %}
-                    <div class="game-hint">
-                        {% if game.status == 'ordering' %}
-                            Rolling for turn order. Open the board to participate.
-                        {% elif game.status == 'drafting' %}
-                            Card drafting in progress.
-                        {% else %}
-                            Game in progress. Use the board view to play.
-                        {% endif %}
-                    </div>
+                <div class="game-hint">
+                    {% if game.status == 'ordering' %}
+                    Rolling for turn order. Open the board to participate.
+                    {% elif game.status == 'drafting' %}
+                    Card drafting in progress.
+                    {% else %}
+                    Game in progress. Use the board view to play.
+                    {% endif %}
+                </div>
 
-                    <div class="game-btn-group">
-                        <a href="{% url 'game:game_board' game.id %}" class="btn btn-primary">
-                            Open game board
-                        </a>
-                        
-                        {% if is_host %}
-                            <!-- End game only shows during active play -->
-                            {% if game.status == 'active' %}
-                                <form method="post" action="{% url 'game:game_end' game.id %}" style="display:inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-secondary">End game</button>
-                                </form>
-                            {% endif %}
-                        {% endif %}
-                    </div>
+                <div class="game-btn-group">
+                    <a href="{% url 'game:game_board' game.id %}" class="btn btn-primary">
+                        Open game board
+                    </a>
+
+                    {% if is_host %}
+                    <!-- End game only shows during active play -->
+                    {% if game.status == 'active' %}
+                    <form method="post" action="{% url 'game:game_end' game.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary">End game</button>
+                    </form>
+                    {% endif %}
+                    {% endif %}
+                </div>
 
                 {% elif game.status == 'finished' %}
-                    <div class="game-hint">
-                        Game finished. Winner: <strong>{{ game.winner.user.username|default:"N/A" }}</strong>
-                    </div>
+                <div class="game-hint">
+                    Game finished. Winner: <strong>{{ game.winner.user.username|default:"N/A" }}</strong>
+                </div>
                 {% endif %}
 
                 <!-- Unified Host Delete Action -->
                 {% if is_host and game.status != 'active' and game.status != 'finished' %}
-                    <form method="post" action="{% url 'game:game_delete' game.id %}" class="game-delete-form">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Delete this game?')">
-                            Delete game
-                        </button>
-                    </form>
+                <form method="post" action="{% url 'game:game_delete' game.id %}" class="game-delete-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-secondary btn-sm"
+                        onclick="return confirm('Delete this game?')">
+                        Delete game
+                    </button>
+                </form>
                 {% endif %}
             </div>
         </div>
@@ -139,47 +140,47 @@
             </div>
             <ul class="player-list" id="player-list">
                 {% for p in players %}
-                    <li class="player-row">
-                        <div class="player-main">
-                            <div class="player-avatar">
-                                {{ p.user.username|first|upper }}
-                            </div>
-                            <div class="player-text">
-                                <div class="player-name">
-                                    {{ p.user.username }}
-                                    {% if game.host_id == p.user_id %}
-                                        <span class="player-role">Host</span>
-                                    {% endif %}
-                                    {% if forloop.first and game.status != 'ordering' %}
-                                        <span class="player-role player-role-turn">Turn order #1</span>
-                                    {% endif %}
-                                </div>
-                                <div class="player-meta">
-                                    Turn order: {{ p.turn_order|add:1 }}
-                                </div>
-                            </div>
+                <li class="player-row">
+                    <div class="player-main">
+                        <div class="player-avatar">
+                            {{ p.user.username|first|upper }}
                         </div>
-                        <div class="player-stats">
-                            <span class="player-stat">
-                                HP: <strong>{{ p.hp }}</strong>
-                            </span>
-                            <span class="player-stat">
-                                Coins: <strong>{{ p.coins }}</strong>
-                            </span>
-                            <span class="player-stat">
-                                Pos: <strong>{{ p.position }}</strong>
-                            </span>
-                            <span class="player-stat">
-                                {% if p.is_alive %}
-                                    <span class="badge badge-soft">Alive</span>
-                                {% else %}
-                                    <span class="badge badge-soft badge-soft-danger">Eliminated</span>
+                        <div class="player-text">
+                            <div class="player-name">
+                                {{ p.user.username }}
+                                {% if game.host_id == p.user_id %}
+                                <span class="player-role">Host</span>
                                 {% endif %}
-                            </span>
+                                {% if forloop.first and game.status != 'ordering' %}
+                                <span class="player-role player-role-turn">Turn order #1</span>
+                                {% endif %}
+                            </div>
+                            <div class="player-meta">
+                                Turn order: {{ p.turn_order|add:1 }}
+                            </div>
                         </div>
-                    </li>
+                    </div>
+                    <div class="player-stats">
+                        <span class="player-stat">
+                            HP: <strong>{{ p.hp }}</strong>
+                        </span>
+                        <span class="player-stat">
+                            Coins: <strong>{{ p.coins }}</strong>
+                        </span>
+                        <span class="player-stat">
+                            Pos: <strong>{{ p.position }}</strong>
+                        </span>
+                        <span class="player-stat">
+                            {% if p.is_alive %}
+                            <span class="badge badge-soft">Alive</span>
+                            {% else %}
+                            <span class="badge badge-soft badge-soft-danger">Eliminated</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </li>
                 {% empty %}
-                    <li>No players in this game yet.</li>
+                <li>No players in this game yet.</li>
                 {% endfor %}
             </ul>
         </div>
@@ -189,52 +190,61 @@
             <div class="game-panel-header">
                 <h3>
                     {% if game.status == 'waiting' %}
-                        Lobby status
+                    Lobby status
                     {% elif game.status == 'active' or game.status == 'ordering' %}
-                        Game in progress
+                    Game in progress
                     {% elif game.status == "drafting" %}
-                        <div class="info-box">
-                            <p>🃏 Drafting in progress</p>
-                            <a href="{% url 'game:game_board' game.id %}" class="btn-primary">
-                                Open draft board
-                            </a>
-                        </div>
+                    <div class="info-box">
+                        <p>🃏 Drafting in progress</p>
+                        <a href="{% url 'game:game_board' game.id %}" class="btn-primary">
+                            Open draft board
+                        </a>
+                    </div>
                     {% else %}
-                        Game summary
+                    Game summary
                     {% endif %}
                 </h3>
             </div>
 
             {% if game.status == 'waiting' %}
-                <p class="game-panel-text">
-                    Share the lobby code with your friends. Once everyone has joined, the host can start the game.
-                </p>
+            <p class="game-panel-text">
+                Share the lobby code with your friends. Once everyone has joined, the host can start the game.
+            </p>
+
+            <!-- QR Code Join Section -->
+            <div class="qr-join-section">
+                <div id="game-qr-code" class="qr-code-placeholder"></div>
+                <div class="qr-instructions">
+                    <span>Scan to join instantly</span>
+                </div>
+            </div>
 
             {% elif game.status == 'active' %}
-                <p class="game-panel-text">
-                    The game is active. Use the board view to roll dice and move across tiles.
-                </p>
-                <p class="game-panel-text">
-                    <a href="{% url 'game:game_board' game.id %}" class="link-quiet">
-                        Open the board view &rarr;
-                    </a>
-                </p>
+            <p class="game-panel-text">
+                The game is active. Use the board view to roll dice and move across tiles.
+            </p>
+            <p class="game-panel-text">
+                <a href="{% url 'game:game_board' game.id %}" class="link-quiet">
+                    Open the board view &rarr;
+                </a>
+            </p>
 
             {% elif game.status == 'ordering' %}
-                <p class="game-panel-text">
-                    Rolling for turn order. All players roll; ties re-roll.
-                </p>
-                <p class="game-panel-text">
-                    <a href="{% url 'game:game_board' game.id %}" class="link-quiet">
-                        Open the board view &rarr;
-                    </a>
-                </p>
+            <p class="game-panel-text">
+                Rolling for turn order. All players roll; ties re-roll.
+            </p>
+            <p class="game-panel-text">
+                <a href="{% url 'game:game_board' game.id %}" class="link-quiet">
+                    Open the board view &rarr;
+                </a>
+            </p>
 
             {% elif game.status == 'finished' %}
-                <p class="game-panel-text">
-                    This match has ended. You can go back to the games list and create or join another lobby.
-                </p>
+            <p class="game-panel-text">
+                This match has ended. You can go back to the games list and create or join another lobby.
+            </p>
             {% endif %}
+
 
             <p class="game-panel-footer-link">
                 <a href="{% url 'game:game_list' %}">&larr; Back to games list</a>
@@ -246,10 +256,33 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/kjua@0.9.0/dist/kjua.min.js"></script>
 <script>
-    window.GAME_ID = {{ game.id|safe }};
-    window.GAME_HOST_USER_ID = {{ game.host_id|default:"null"|safe }};
-    window.GAME_MAX_PLAYERS = {{ game.max_players|safe }};
+    window.GAME_ID = {{ game.id | safe }};
+    window.GAME_HOST_USER_ID = {{ game.host_id |default: "null" | safe }};
+    window.GAME_MAX_PLAYERS = {{ game.max_players | safe }};
+    window.GAME_CODE = "{{ game.code|safe }}";
+
+    // Generate QR Code if the QR container exists (only in 'waiting' status)
+    document.addEventListener('DOMContentLoaded', function () {
+        const qrContainer = document.getElementById('game-qr-code');
+        if (qrContainer) {
+            const joinUrl = window.location.origin + "/join/" + window.GAME_CODE + "/";
+            const qr = kjua({
+                render: 'canvas',
+                crisp: true,
+                size: 160,
+                text: joinUrl,
+                fill: '#ffffff',
+                back: 'transparent',
+                rounded: 10,
+                quiet: 1,
+                mode: 'plain'
+            });
+            qrContainer.innerHTML = '';
+            qrContainer.appendChild(qr);
+        }
+    });
 </script>
 <script src="{% static 'js/game_lobby.js' %}"></script>
 {% endblock %}
