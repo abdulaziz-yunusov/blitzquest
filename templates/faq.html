@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}FAQ - BlitzQuest{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/faq.css' %}">
+{% endblock %}
+
+{% block body_class %}faq-page-body{% endblock %}
+{% block main_class %}full-width{% endblock %}
+
+{% block content %}
+<div class="faq-container">
+    <!-- Header Section -->
+    <div class="faq-header">
+        <div class="faq-header-content">
+            <h1 class="faq-title">
+                <span class="faq-icon">❓</span>
+                Frequently Asked Questions
+            </h1>
+            <p class="faq-subtitle">Everything you need to know about BlitzQuest</p>
+        </div>
+        <a href="{% url 'game:home' %}" class="faq-back-btn">
+            <span class="back-arrow">‹</span> Back to Home
+        </a>
+    </div>
+
+    <!-- FAQ Accordion -->
+    <div class="faq-content">
+        <div class="faq-accordion">
+            <!-- Question 1 -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span class="faq-q-text">What is BlitzQuest?</span>
+                    <span class="faq-toggle-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>BlitzQuest is an exciting online trivia game where players compete to answer questions correctly
+                        and quickly. Challenge your friends or random opponents in various game modes, track your
+                        progress, and climb the leaderboards!</p>
+                </div>
+            </div>
+
+            <!-- Question 2 -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span class="faq-q-text">How do I start playing?</span>
+                    <span class="faq-toggle-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Getting started is easy:</p>
+                    <ol>
+                        <li>Create an account or log in</li>
+                        <li>Choose a game mode (Custom Game, Random Match, etc.)</li>
+                        <li>Enter a game code or create your own room</li>
+                        <li>Wait for other players to join</li>
+                        <li>Answer questions as fast as you can!</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Question 3 -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span class="faq-q-text">What game modes are available?</span>
+                    <span class="faq-toggle-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>BlitzQuest offers several exciting game modes:</p>
+                    <ul>
+                        <li><strong>Custom Game:</strong> Create a private room and invite specific players</li>
+                        <li><strong>Random Match:</strong> Get matched with random opponents worldwide</li>
+                        <li><strong>Tournament:</strong> Compete in organized events for prizes</li>
+                        <li><strong>Practice Mode:</strong> Hone your skills without affecting your stats</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Question 4 -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span class="faq-q-text">How is scoring calculated?</span>
+                    <span class="faq-toggle-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Your score is based on two factors:</p>
+                    <ul>
+                        <li><strong>Accuracy:</strong> Getting the correct answer earns base points</li>
+                        <li><strong>Speed:</strong> Faster responses earn bonus points</li>
+                    </ul>
+                    <p>The formula rewards both knowledge and quick thinking. Wrong answers don't deduct points, so
+                        always take your best guess!</p>
+                </div>
+            </div>
+
+            <!-- Question 5 -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span class="faq-q-text">Can I play on mobile devices?</span>
+                    <span class="faq-toggle-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Yes! BlitzQuest is fully responsive and works seamlessly on mobile devices, tablets, and
+                        desktops. Simply access the website from any modern browser and enjoy the same great experience
+                        on any device.</p>
+                </div>
+            </div>
+
+            <!-- Question 6 -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span class="faq-q-text">How do I track my progress?</span>
+                    <span class="faq-toggle-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Visit your Profile page to view:</p>
+                    <ul>
+                        <li>Total games played</li>
+                        <li>Win rate percentage</li>
+                        <li>Match history with timestamps and durations</li>
+                        <li>Personal statistics and achievements</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Question 7 -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span class="faq-q-text">Is there a time limit for answering?</span>
+                    <span class="faq-toggle-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Yes, each question has a countdown timer (typically 15-30 seconds depending on difficulty). This
+                        keeps the game fast-paced and exciting. If time runs out, the question is marked as incorrect
+                        and the next question appears.</p>
+                </div>
+            </div>
+
+            <!-- Question 8 -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span class="faq-q-text">How can I improve my performance?</span>
+                    <span class="faq-toggle-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Here are some tips:</p>
+                    <ul>
+                        <li>Use Practice Mode to familiarize yourself with question types</li>
+                        <li>Read questions carefully but quickly</li>
+                        <li>Trust your first instinct when time is running out</li>
+                        <li>Play regularly to build pattern recognition</li>
+                        <li>Review your match history to identify weak areas</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Question 9 -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span class="faq-q-text">What if I encounter a bug or technical issue?</span>
+                    <span class="faq-toggle-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>If you experience any technical issues, please:</p>
+                    <ol>
+                        <li>Try refreshing your browser first</li>
+                        <li>Clear your cache and cookies</li>
+                        <li>Ensure you have a stable internet connection</li>
+                        <li>Contact our support team with details about the issue</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Question 10 -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span class="faq-q-text">Can I play with friends?</span>
+                    <span class="faq-toggle-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Absolutely! Use the Custom Game mode to create a private room. Share the game code with your
+                        friends, and they can join your room directly. You can play with 2-8 players in a single game.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA Section -->
+        <div class="faq-cta">
+            <h3>Still have questions?</h3>
+            <p>Contact our support team for more help</p>
+            <a href="{% url 'game:home' %}" class="cta-button">Start Playing Now</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleFaq(button) {
+        const item = button.parentElement;
+        const answer = item.querySelector('.faq-answer');
+        const icon = button.querySelector('.faq-toggle-icon');
+        const isOpen = item.classList.contains('active');
+
+        // Close all other items
+        document.querySelectorAll('.faq-item').forEach(otherItem => {
+            if (otherItem !== item) {
+                otherItem.classList.remove('active');
+                otherItem.querySelector('.faq-toggle-icon').textContent = '+';
+            }
+        });
+
+        // Toggle current item
+        if (isOpen) {
+            item.classList.remove('active');
+            icon.textContent = '+';
+        } else {
+            item.classList.add('active');
+            icon.textContent = '−';
+        }
+    }
+</script>
+{% endblock %}

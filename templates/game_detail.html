@@ -194,17 +194,21 @@
                     {% elif game.status == 'active' or game.status == 'ordering' %}
                     Game in progress
                     {% elif game.status == "drafting" %}
-                    <div class="info-box">
-                        <p>🃏 Drafting in progress</p>
-                        <a href="{% url 'game:game_board' game.id %}" class="btn-primary">
-                            Open draft board
-                        </a>
-                    </div>
+                    Drafting
                     {% else %}
                     Game summary
                     {% endif %}
                 </h3>
             </div>
+
+            {% if game.status == "drafting" %}
+            <div class="info-box">
+                <p>🃏 Drafting in progress</p>
+                <a href="{% url 'game:game_board' game.id %}" class="btn-primary">
+                    Open draft board
+                </a>
+            </div>
+            {% endif %}
 
             {% if game.status == 'waiting' %}
             <p class="game-panel-text">
@@ -261,7 +265,7 @@
     window.GAME_ID = {{game.id|safe}};
     window.GAME_HOST_USER_ID = {{game.host_id|default:"null"|safe}};
     window.GAME_MAX_PLAYERS = {{game.max_players|safe}};
-    window.GAME_CODE = "{{ game.code|safe }}";
+    window.GAME_CODE = "{{game.code|safe}}";
 
     // Generate QR Code if the QR container exists (only in 'waiting' status)
     document.addEventListener('DOMContentLoaded', function () {

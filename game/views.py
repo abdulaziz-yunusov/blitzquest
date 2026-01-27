@@ -129,7 +129,32 @@ def profile(request):
     win_rate = (total_wins / total_games * 100) if total_games > 0 else 0
 
     # Match History
-    history = user_games.order_by("-game__created_at")[:10]
+    history_qs = user_games.order_by("-game__created_at")[:10]
+    history = []
+    from django.utils import timezone
+    
+    for match in history_qs:
+        game = match.game
+        duration_str = "-"
+        
+        # Calculate duration
+        start = game.created_at
+        end = game.updated_at if game.status == "finished" else timezone.now()
+        
+        if start and end:
+            diff = end - start
+            total_seconds = int(diff.total_seconds())
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+            duration_str = f"{hours:02}:{minutes:02}:{seconds:02}"
+
+        history.append({
+            "game": game,
+            "created_at": game.created_at,
+            "duration": duration_str,
+            "match_id": match.id # keep reference if needed
+        })
 
     context = {
         "user_profile": user,
@@ -1765,3 +1790,8 @@ def game_chat_send(request, game_id: int):
         "created_at": msg.created_at.isoformat(),
         "is_you": True,
     })
+
+
+def faq(request):
+    """FAQ page view"""
+    return render(request, "faq.html")

@@ -10,6 +10,7 @@ urlpatterns = [
     path("password_reset/", views.password_reset_request, name="password_reset_request"),
     path("password_reset/confirm/", views.password_reset_confirm, name="password_reset_confirm"),
     path("profile/", views.profile, name="profile"),
+    path("faq/", views.faq, name="faq"),
 
     # Game management
     path("games/", views.game_list, name="game_list"),

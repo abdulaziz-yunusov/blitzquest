@@ -37,7 +37,7 @@
                 Back to home
                 <span class="v3-btn-arrow">‹</span>
             </a>
-            <a href="#" class="v3-nav-btn btn-ghost">
+            <a href="{% url 'game:faq' %}" class="v3-nav-btn btn-ghost">
                 <span class="v3-btn-icon">🧩</span>
                 Faq
                 <span class="v3-btn-arrow">‹</span>
@@ -96,20 +96,19 @@
                     <h3 class="v3-section-label">History</h3>
 
                     <div class="v3-history-list">
-                        {% for match in matches %}
+                        {% for item in history %}
                         <div class="v3-history-item">
                             <div class="v3-history-info">
-                                <p class="v3-history-title">Uyin Rejimi</p>
+                                <p class="v3-history-title">{{ item.game.get_mode_display }}</p>
                                 <div class="v3-history-meta">
-                                    <span class="v3-meta-id"><span class="v3-icon">🔑</span> CV{{
-                                        match.id|stringformat:"05d" }}</span>
+                                    <span class="v3-meta-id"><span class="v3-icon">🔑</span> {{ item.game.code }}</span>
                                     <span class="v3-meta-date"><span class="v3-icon">📅</span> {{
-                                        match.created_at|date:"d December Y | h:i A" }}</span>
+                                        item.created_at|date:"d F Y | h:i A" }}</span>
                                 </div>
                             </div>
                             <div class="v3-history-time">
                                 <span class="v3-clock-icon">🕒</span>
-                                01:14:23
+                                {{ item.duration }}
                             </div>
                         </div>
                         {% empty %}
