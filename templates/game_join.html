@@ -3,22 +3,25 @@
 
 {% block title %}Join game – BlitzQuest{% endblock %}
 
+{# === Stylesheets === #}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/game_join.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="gj-page">
+  {# === Main Join Form === #}
   <section class="gj-card gj-card-main">
     <h2 class="gj-title">Join a game</h2>
     <p class="gj-subtitle">
-      Enter the lobby code shared by your friend or host.
-      You will join the game with default stats and wait in the lobby until the host starts.
+      Enter the game code shared by your friend to join their BlitzQuest lobby.
+      Wait for the host to start, then compete in strategic board-based battles!
     </p>
 
     <form method="post" class="gj-form">
       {% csrf_token %}
 
+      {# Form Fields #}
       {% for field in form %}
       <div class="gj-field">
         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -32,6 +35,7 @@
       </div>
       {% endfor %}
 
+      {# Non-field Errors #}
       {% if form.non_field_errors %}
       <div class="gj-error-block">
         {% for error in form.non_field_errors %}
@@ -40,6 +44,7 @@
       </div>
       {% endif %}
 
+      {# Action Buttons #}
       <div class="gj-actions">
         <button type="submit" class="btn btn-primary">Join game</button>
         <a href="{% url 'game:game_list' %}" class="gj-secondary-link">
@@ -49,21 +54,24 @@
     </form>
   </section>
 
+  {# === Help Sidebar === #}
   <section class="gj-card gj-card-side">
-    <h3 class="gj-side-title">Where to find the code?</h3>
+    {# Finding the Code #}
+    <h3 class="gj-side-title">Finding the Code</h3>
     <ul class="gj-side-list">
-      <li>Your friend sees it on the lobby screen as the <strong>Game code</strong>.</li>
-      <li>Codes are short, in the format <strong>ABC123</strong> (letters and digits).</li>
-      <li>The game must still be in <strong>Waiting</strong> status to accept new players.</li>
+      <li>The host can share the <strong>Game Code</strong> displayed in their lobby.</li>
+      <li>Codes follow the format <strong>ABC123</strong> (6 characters: letters + numbers).</li>
+      <li>You can only join games in <strong>Waiting</strong> status before they start.</li>
     </ul>
 
     <div class="gj-divider"></div>
 
-    <h3 class="gj-side-title">Joining notes</h3>
+    {# What to Expect #}
+    <h3 class="gj-side-title">What to Expect</h3>
     <ul class="gj-side-list">
-      <li>You will start with 3 HP, 0 coins, and a starting support card.</li>
-      <li>Your <strong>turn order</strong> is based on when you join.</li>
-      <li>Once the host starts the game, you’ll see the board and turns in real time.</li>
+      <li>Starting stats vary by game mode (board modes: 3 HP, 0 coins; Card Duel: custom deck).</li>
+      <li><strong>Turn order</strong> is determined by a dice roll after all players join.</li>
+      <li>Experience real-time gameplay with dice rolls, tile effects, questions, and strategic card usage!</li>
     </ul>
   </section>
 </div>

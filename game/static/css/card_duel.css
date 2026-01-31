@@ -1,0 +1,448 @@
+/* =========================================================================
+   CARD DUEL GAME STYLE SHEET
+   =========================================================================
+   Defines the visual layout and interactivity for the Card Duel game mode.
+   Handles the game board grid, hand management, card animations, and 
+   responsive adjustments for various screen sizes.
+   ========================================================================= */
+
+/* 
+   Layout Override
+   - Adjusts the main grid to hide the sidebar and provide ample space for the game board.
+   - Forces a specifc column structure.
+*/
+.board-layout {
+  grid-template-columns: 340px 1fr !important;
+}
+
+/* Hides the default sidebar to maximize game area */
+.board-sidebar {
+  display: none !important;
+}
+
+
+/* 
+   Main Game Container (#card-duel-root)
+   - Uses CSS Grid for vertical layout:
+     Row 1: Opponent Hand (Top)
+     Row 2: Top Bar (Stats/Turn Info)
+     Row 3: Battlefield (Center)
+     Row 4: Player Hand (Bottom)
+   - Centers content with a max-width constraint for large screens.
+*/
+#card-duel-root.card-duel-board {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  /* Adaptive row sizing */
+  gap: 14px;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+/* 
+   Top Information Bar
+   - Displays Player stats vs Opponent stats.
+   - Centers the "Turn" indicator.
+   - Uses a 3-column grid layout.
+*/
+#card-duel-root .cd-topbar {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  align-items: center;
+  gap: 28px;
+  padding: 8px 0;
+}
+
+/* Reset padding for grid cells to align content cleanly */
+#card-duel-root .cd-topbar-left,
+#card-duel-root .cd-topbar-right,
+#card-duel-root .cd-topbar-mid {
+  padding: 0;
+}
+
+
+/* Styling for labels like "You" or "Opponent" */
+#card-duel-root .cd-top-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.85;
+  margin-bottom: 4px;
+}
+
+/* 
+   Stats Row (HP, Shield, etc.)
+   - Uses flexbox gap for spacing between icons/values.
+*/
+#card-duel-root .cd-top-stats {
+  font-size: 0.95rem;
+  gap: 14px;
+  line-height: 1.4;
+}
+
+/* Sub-status text (e.g., "Waiting for opponent...") */
+#card-duel-root .cd-status {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+/* 
+   Battlefield Area (Center Table)
+   - The main play area where active cards are shown.
+   - Features a radial gradient background to simulate a table surface or space effect.
+*/
+#card-duel-root .duel-battlefield {
+  position: relative;
+  padding: 18px 14px;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(99, 102, 241, 0.12), transparent 55%),
+    rgba(2, 6, 23, 0.22);
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  overflow: hidden;
+}
+
+/* Container for the played card slots */
+#card-duel-root .cd-pile {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* 
+   Card Slot Styling
+   - Placeholders where cards are dropped or played.
+   - Glassmorphic look with semi-transparent borders and background.
+*/
+#card-duel-root .cd-play-slot {
+  width: 175px;
+  height: 255px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Ensures images fill the slot completely */
+#card-duel-root .cd-play-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 14px;
+}
+
+/* Center text area for game messages/logs */
+#card-duel-root .cd-centertext {
+  text-align: center;
+  max-width: 760px;
+}
+
+/* Turn hint text (e.g., "Your Turn") */
+#card-duel-root #cd-turn-hint {
+  font-size: 0.95rem;
+  color: rgba(226, 232, 240, 0.90);
+}
+
+/* Feedback messages (e.g., "Not enough mana") */
+#card-duel-root #cd-feedback {
+  margin-top: 6px;
+  min-height: 18px;
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+
+/* 
+   Base Card Styling
+   - Defines the dimensions and transition properties for all cards.
+   - Used in hand and on board.
+*/
+#card-duel-root .cd-card {
+  width: 160px;
+  flex: 0 0 auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  transform: translateY(0) scale(1);
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+/* 
+   Card Image Styling
+   - Ensures images fit within the card container.
+   - Removes default borders/shadows for a cleaner look.
+*/
+#card-duel-root .cd-card img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 14px;
+  /* Removed shadow and border for cleanest look */
+  box-shadow: none;
+  border: none;
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+/* 
+   Hover Effects (Player Hand Only)
+   - Lifts the card up (-14px) and brightens it slightly.
+*/
+#card-duel-root .cd-hand-row--you .cd-card:hover {
+  transform: translateY(-14px);
+}
+
+#card-duel-root .cd-hand-row--you .cd-card:hover img {
+  transform: none;
+  filter: brightness(1.1);
+}
+
+/* 
+   Disabled State
+   - Used when not player's turn or card is unplayable.
+   - Greyscale and opacity reduction.
+*/
+#card-duel-root .cd-card[disabled],
+#card-duel-root .cd-card:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(55%);
+}
+
+/* 
+   Responsive Design: Tablet & Medium Screens
+   - Stacks the top bar elements vertically.
+   - Reduces card sizes slightly.
+*/
+@media (max-width: 900px) {
+  #card-duel-root .cd-topbar {
+    grid-template-columns: 1fr;
+  }
+
+  #card-duel-root .cd-topbar-mid {
+    justify-content: flex-start;
+  }
+
+  #card-duel-root .cd-play-slot {
+    width: 160px;
+    height: 235px;
+  }
+
+  #card-duel-root .cd-card {
+    width: 145px;
+  }
+}
+
+/* 
+   Responsive Design: Mobile Screens
+   - Further reduces card sizes and spacing.
+*/
+@media (max-width: 620px) {
+  #card-duel-root .cd-pile {
+    gap: 12px;
+  }
+
+  #card-duel-root .cd-play-slot {
+    width: 140px;
+    height: 205px;
+  }
+
+  #card-duel-root .cd-card {
+    width: 132px;
+  }
+}
+
+/* Wrapper for the main board area */
+.board-main-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* "End Turn" button styling */
+#cd-endturn-btn {
+  background: #6d6bff;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-weight: 600;
+}
+
+/* =========================================================================
+   OPPONENT HAND STYLING
+   =========================================================================
+   - Displays the back of the opponent's cards.
+   - Non-interactive (no hover effects affecting position).
+   ========================================================================= */
+
+#card-duel-root .duel-opponent {
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  overflow: visible;
+  display: flex;
+  justify-content: center;
+}
+
+/* Opponent Hand Container */
+#card-duel-root #cd-opp-hand-cards.cd-hand-row {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 8px 6px;
+  overflow: visible !important;
+  gap: 0 !important;
+  /* Stacked cards if needed, handled by negative margins usually */
+}
+
+/* Opponent Card Item */
+#card-duel-root #cd-opp-hand-cards .cd-card {
+  width: 160px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+  filter: brightness(0.90);
+  /* Slightly darker to indicate non-player cards */
+  transform: translateY(0) scale(1);
+  transition: none;
+}
+
+#card-duel-root #cd-opp-hand-cards .cd-card img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* 
+   Stacking Logic for Opponent
+   - Uses negative left margin to overlap cards.
+*/
+#card-duel-root #cd-opp-hand-cards .cd-card {
+  margin-left: -110px;
+  position: relative;
+}
+
+/* First card should not have negative margin */
+#card-duel-root #cd-opp-hand-cards .cd-card:first-child {
+  margin-left: 0;
+}
+
+/* =========================================================================
+   PLAYER HAND STYLING & COLLAPSE LOGIC
+   =========================================================================
+   - Handles the visual "fanning" or stacking of player cards.
+   - Provides separate logic for "Default" vs "Collapsed" states.
+   ========================================================================= */
+
+/* Base container for hand rows */
+#card-duel-root .cd-hand-row {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 8px 6px;
+  overflow: visible;
+}
+
+/* 
+   FORCED COLLAPSE STATE (Permanent overlap)
+   - Used when styling overrides set gap to 0 explicitly.
+*/
+#card-duel-root #cd-hand {
+  gap: 0 !important;
+}
+
+#card-duel-root #cd-hand .cd-card {
+  margin-left: -110px;
+  position: relative;
+  z-index: 1;
+}
+
+#card-duel-root #cd-hand .cd-card:first-child {
+  margin-left: 0;
+}
+
+/* Hover effect for stacked cards: brings card to front (z-index) and lifts it */
+#card-duel-root #cd-hand .cd-card:hover {
+  z-index: 50;
+  transform: translateY(-16px) scale(1.03);
+}
+
+
+/* =========================================================================
+   CONDITIONAL COLLAPSE LOGIC (VIA JS CLASS)
+   =========================================================================
+   - If the .is-collapsed class is added via JS (e.g., small screens or many cards),
+     it tightens the layout.
+   ========================================================================= */
+
+/* Default state: spaced out cards */
+#card-duel-root #cd-hand {
+  gap: 14px;
+  overflow: visible;
+}
+
+/* Collapsed state: Overlap cards */
+#card-duel-root #cd-hand.is-collapsed {
+  gap: 0 !important;
+}
+
+#card-duel-root #cd-hand.is-collapsed .cd-card {
+  margin-left: -110px;
+  /* Overlap amount */
+  position: relative;
+  z-index: 1;
+}
+
+#card-duel-root #cd-hand.is-collapsed .cd-card:first-child {
+  margin-left: 0;
+}
+
+#card-duel-root #cd-hand.is-collapsed .cd-card:hover {
+  z-index: 50;
+  transform: translateY(-16px) scale(1.03);
+}
+
+/* 
+   Played Card Title Overlay
+   - Shows the name of the card overlaid on top of the card image 
+     when it is on the board/pile.
+   - Uses backdrop-filter for readability.
+*/
+#card-duel-root .cd-card--played {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: default;
+}
+
+#card-duel-root .cd-card--played .cd-card-title {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  word-wrap: break-word;
+  line-height: 1.2;
+  overflow: visible;
+}

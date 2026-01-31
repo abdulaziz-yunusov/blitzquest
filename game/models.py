@@ -13,6 +13,10 @@ User = get_user_model()
 
 
 class Profile(models.Model):
+    """
+    Profile model extending the built-in User model.
+    Stores additional user information like birthdate, gender, and profile picture.
+    """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     birthdate = models.DateField(null=True, blank=True)
     gender = models.CharField(
@@ -29,18 +33,28 @@ class Profile(models.Model):
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
+    """
+    Signal handler to create a Profile instance whenever a new User is created.
+    """
     if created:
         Profile.objects.get_or_create(user=instance)
 
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
+    """
+    Signal handler to save the Profile instance whenever the User is saved.
+    """
     if not hasattr(instance, "profile"):
         Profile.objects.get_or_create(user=instance)
     instance.profile.save()
 
 
 class Game(models.Model):
+    """
+    Main Game model representing a single game session.
+    Manages game state, players, turn order, and mode-specific logic.
+    """
     class Status(models.TextChoices):
         WAITING = "waiting", "Waiting for players"
         ORDERING = "ordering", "Rolling for turn order"
@@ -52,6 +66,7 @@ class Game(models.Model):
         FINISH = "finish", "Custom Game"
         DRAFT = "draft", "Draft Mode"
         SURVIVAL = "survival", "Survival"
+        CARD_DUEL = "card_duel", "Card Duel"
 
     code = models.CharField(
         max_length=8,
@@ -116,21 +131,24 @@ class Game(models.Model):
 
     @property
     def is_active(self) -> bool:
+        """Returns True if the game status is active."""
         return self.status == self.Status.ACTIVE
 
     @property
     def players_by_turn_order(self):
         """
-        Shortcut: players in this game ordered by turn_order.
-        Assumes PlayerInGame has FK game with related_name='players'.
+        Returns a queryset of players in this game ordered by turn_order.
         """
         return self.players.order_by("turn_order")
 
     def sync_turn_to_alive_player(self) -> bool:
-        """Ensure `current_turn_index` points to an alive player.
+        """
+        Ensures `current_turn_index` points to an alive player.
+        Fixes cases where a player is eliminated out of turn, but turn index implies it's their turn.
+        Does not override pending modal locks (question, shop, etc.).
 
-        Fixes cases where a player is eliminated out of turn, but turn index
-        still points at them. Does not override pending modal locks.
+        Returns:
+            bool: True if the turn index was updated, False otherwise.
         """
         if self.pending_question or self.pending_shop or self.pending_duel or self.pending_gun:
             return False
@@ -159,7 +177,10 @@ class Game(models.Model):
 
     @property
     def current_player(self):
-        # Keep the turn on a living player to avoid "dead player" turns.
+        """
+        Returns the PlayerInGame instance currently holding the turn.
+        Ensures the turn is held by an alive player.
+        """
         self.sync_turn_to_alive_player()
 
         players = list(self.players_by_turn_order)
@@ -180,10 +201,22 @@ class Game(models.Model):
         choices=SurvivalDifficulty.choices,
         default=SurvivalDifficulty.NORMAL,
     )
+
     def apply_survival_move(self, player, dice_value: int) -> dict:
+        """
+        Applies move logic for Survival Mode.
+        Handles cycling around the board, lap rewards, and tile effects.
+
+        Args:
+            player (PlayerInGame): The player moving.
+            dice_value (int): The distance to move.
+
+        Returns:
+            dict: The result of the move, including position updates and effects.
+        """
         board_size = self.tiles.count() or 35
         portal_pos = board_size - 1
-        cycle = board_size - 1  # ✅ landing positions are 0..cycle-1; portal is never landed
+        cycle = board_size - 1  # landing positions are 0..cycle-1; portal is never landed
 
         from_pos = int(player.position or 0)
         raw = from_pos + int(dice_value)
@@ -204,7 +237,7 @@ class Game(models.Model):
         if landed_tile:
             tile_effect = self.execute_tile_effect(player, landed_tile)
 
-        self.check_survival_winner()
+        self.check_elimination_winner()
 
         return {
             "from_position": from_pos,
@@ -219,17 +252,28 @@ class Game(models.Model):
             "won": self.status == self.Status.FINISHED,
         }
 
-    def check_survival_winner(self):
-        if self.mode != self.Mode.SURVIVAL:
+    def check_elimination_winner(self):
+        """
+        Checks if only one player remains alive in elimination modes (Survival, Finish/Custom, Draft).
+        If so, ends the game and declares distinct winner.
+        """
+        if self.mode not in (self.Mode.SURVIVAL, self.Mode.FINISH, self.Mode.DRAFT):
             return
 
         alive = list(self.players.filter(is_alive=True))
-        if len(alive) == 1:
+        # If 1 (or 0?) alive, game ends.
+        if len(alive) <= 1:
             self.status = self.Status.FINISHED
-            self.winner = alive[0]
+            # If exactly one is alive, they are the winner.
+            if len(alive) == 1:
+                self.winner = alive[0]
+            # If 0 alive (everyone died same time?), no winner set or handle as draw? 
+            # Original code only handled == 1. stick to <= 1 but only set winner if == 1.
+            
             self.save(update_fields=["status", "winner"])
 
     def clean(self):
+        """Custom validation for the Game model."""
         # Survival is always 35 tiles
         if self.mode in (self.Mode.SURVIVAL, self.Mode.DRAFT):
             self.board_length = 35
@@ -239,13 +283,16 @@ class Game(models.Model):
         super().save(*args, **kwargs)
 
     # ---------------------------
-    # NEW: keep turn locked to pending question owner
+    # Turn Synchronization Helpers
     # ---------------------------
+
     def sync_turn_to_pending_question(self) -> bool:
         """
         If there is a pending question, ensure current_turn_index points to
         the player who must answer it.
-        Returns True if changed.
+        
+        Returns:
+            bool: True if the turn index changed.
         """
         pq = self.pending_question
         if not pq:
@@ -273,7 +320,9 @@ class Game(models.Model):
         """
         If there is a pending shop, ensure current_turn_index points to
         the player who must close it.
-        Returns True if changed.
+        
+        Returns:
+            bool: True if the turn index changed.
         """
         ps = self.pending_shop
         if not ps:
@@ -298,6 +347,13 @@ class Game(models.Model):
         return False
     
     def sync_turn_to_pending_gun(self) -> bool:
+        """
+        If there is a pending gun action, ensure current_turn_index points to
+        the player who must resolve it.
+        
+        Returns:
+            bool: True if the turn index changed.
+        """
         pg = self.pending_gun
         if not pg:
             return False
@@ -317,10 +373,14 @@ class Game(models.Model):
         return False
 
 
-    # ---------------------------
-    # NEW: keep turn locked to pending duel owner
-    # ---------------------------
     def sync_turn_to_pending_duel(self) -> bool:
+        """
+        If there is a pending duel, ensure current_turn_index points to
+        the initiator or relevant player.
+
+        Returns:
+            bool: True if the turn index changed.
+        """
         pd = self.pending_duel
         if not pd:
             return False
@@ -342,12 +402,19 @@ class Game(models.Model):
 
     def to_public_state(self, for_user=None, viewer=None):
         """
-        JSON-serializable representation of the game state.
+        Returns a JSON-serializable dictionary representation of the game state.
+        This is the primary payload sent to the frontend.
+
+        Args:
+            for_user (User): The user requesting the state (used to determine 'is_you').
+            viewer: Optional viewer context.
+
+        Returns:
+            dict: The public game state.
         """
         UserModel = get_user_model()
 
-        # Ensure consistency: if question is pending, lock turn to that player
-        # (safe + doesn't change game logic; just prevents drift)
+        # Ensure consistency: if action is pending, lock turn to that player
         self.sync_turn_to_pending_question()
         self.sync_turn_to_pending_shop()
         self.sync_turn_to_pending_duel()
@@ -359,8 +426,7 @@ class Game(models.Model):
 
         current = self.current_player
 
-        # Determine `me` (PlayerInGame for the requesting user) early so
-        # pending question reveal logic can reference it safely.
+        # Determine `me` (PlayerInGame for the requesting user) early
         me = None
         if for_user is not None and isinstance(for_user, UserModel):
             for p in players_list:
@@ -469,6 +535,7 @@ class Game(models.Model):
             "pending_gun_active": gun_active,
             "pending_gun_for_player_id": gun_for_player_id,
         }
+
         # ----------------------------
         # Pending Duel (Prediction Duel)
         # ----------------------------
@@ -564,6 +631,7 @@ class Game(models.Model):
         return payload
 
     def last_tile_index(self) -> int:
+        """Returns the position index of the last tile on the board."""
         max_pos = self.tiles.aggregate(max_pos=Max("position"))["max_pos"]
         if max_pos is not None:
             return max_pos
@@ -574,9 +642,20 @@ class Game(models.Model):
         return 0
 
     def get_player_for_user(self, user):
+        """Helper to retrieve PlayerInGame for a given user in this game."""
         return self.players.select_related("user").get(user=user)
 
     def apply_basic_move(self, player, dice_value: int) -> dict:
+        """
+        Applies move logic for basic game modes (Finish/Custom).
+        
+        Args:
+            player (PlayerInGame): The player moving.
+            dice_value (int): The distance to move.
+            
+        Returns:
+            dict: Move results including win check and tile effects.
+        """
         from_pos = player.position
         last_index = self.last_tile_index()
 
@@ -612,6 +691,17 @@ class Game(models.Model):
         }
 
     def execute_tile_effect(self, player, tile, *, ctx=None):
+        """
+        Executes the effect of a tile when a player lands on it.
+
+        Args:
+            player (PlayerInGame): The player triggering the tile.
+            tile (BoardTile): The tile landed on.
+            ctx (dict, optional): Context for complex chain effects (e.g. Mass Warp).
+
+        Returns:
+            dict: Description of effects applied (hp_delta, position_delta, extra data).
+        """
         t = tile.tile_type
         value = tile.value_int
         cfg = tile.config or {}
@@ -936,6 +1026,18 @@ class Game(models.Model):
         return max(1, int(base))
 
     def apply_damage(self, player, damage: int, effects: dict | None = None, *, source: str | None = None):
+        """
+        Applies damage to a player, handling shield absorption and death checks.
+
+        Args:
+            player (PlayerInGame): The player taking damage.
+            damage (int): The amount of damage.
+            effects (dict, optional): Effects dict to update with damage details.
+            source (str, optional): The source of damage (e.g., "trap").
+
+        Returns:
+            dict: Summary of damage applied (blocked, taken, died).
+        """
         dmg = max(0, int(damage or 0))
         if dmg == 0:
             return {"blocked": 0, "taken": 0, "died": False}
@@ -959,6 +1061,8 @@ class Game(models.Model):
 
         if update_fields:
             player.save(update_fields=sorted(set(update_fields)))
+            if player.hp == 0:
+                self.check_elimination_winner()
 
         if effects is not None:
             effects["hp_delta"] = effects.get("hp_delta", 0) - taken
@@ -971,6 +1075,7 @@ class Game(models.Model):
         return {"blocked": blocked, "taken": taken, "died": (taken > 0 and player.hp == 0)}
 
     def build_leaderboard(self):
+        """Builds a leaderboard list for the game end."""
         players_qs = self.players.select_related("user").all()
 
         ranked = sorted(
@@ -998,6 +1103,9 @@ class Game(models.Model):
                     "position": p.position,
                     "coins": p.coins,
                     "hp": p.hp,
+                    "shield": getattr(p, "shield_points", 0),
+                    "deck_count": len(getattr(p, "cd_deck", []) or []),
+                    "hand_count": len(getattr(p, "cd_hand", []) or []),
                     "is_alive": p.is_alive,
                     "status": status,
                 }
@@ -1006,6 +1114,10 @@ class Game(models.Model):
         return leaderboard
 
     def advance_turn(self):
+        """
+        Advances the turn to the next alive player.
+        Checks for game end conditions if no alive players remain.
+        """
         players = list(self.players_by_turn_order)
         if not players:
             return None
@@ -1026,6 +1138,16 @@ class Game(models.Model):
         return None
 
     def roll_and_apply_for(self, player):
+        """
+        High-level helper to roll dice and move a player.
+        Checks game mode and handles turn synchronization for modal locks.
+
+        Args:
+            player (PlayerInGame): The player rolling.
+
+        Returns:
+            dict: The turn result (dice, move result, next player).
+        """
         dice = _r.randint(1, 6)
 
         if self.mode == self.Mode.SURVIVAL:
@@ -1065,6 +1187,10 @@ class Game(models.Model):
         }
 
     def generate_random_board(self):
+        """
+        Generates a new random board layout based on the game config.
+        Populates BoardTile instances for the game.
+        """
         if self.mode in (self.Mode.SURVIVAL, self.Mode.DRAFT):
             self.board_length = 35
         
@@ -1194,6 +1320,10 @@ class Game(models.Model):
 
 
 class PlayerInGame(models.Model):
+    """
+    Represents a player participating in a specific game instance.
+    Stores player-specific state like HP, coins, position, and Card Duel state.
+    """
     game = models.ForeignKey(
         Game,
         on_delete=models.CASCADE,
@@ -1237,6 +1367,16 @@ class PlayerInGame(models.Model):
 
     joined_at = models.DateTimeField(auto_now_add=True)
 
+    # Card deck state (for Card Duel Mode)
+    cd_deck = models.JSONField(default=list, blank=True)
+    cd_hand = models.JSONField(default=list, blank=True)
+    cd_discard = models.JSONField(default=list, blank=True)
+    cd_status = models.JSONField(default=list, blank=True)
+    cd_turn_flags = models.JSONField(default=dict, blank=True)
+    cd_picks_done = models.PositiveSmallIntegerField(default=0)
+    cd_pick_options = models.JSONField(default=list, blank=True)
+
+        
     class Meta:
         unique_together = ("game", "user")
         ordering = ["game", "turn_order"]
@@ -1244,8 +1384,43 @@ class PlayerInGame(models.Model):
     def __str__(self) -> str:
         return f"{self.user} in {self.game} (HP={self.hp}, pos={self.position})"
 
+    def cd_reset_turn_flags(self) -> None:
+        """Resets turn-specific flags for Card Duel mode."""
+        prev_last = (self.cd_turn_flags or {}).get("last_played")
+        self.cd_turn_flags = {
+            "action_used": False,
+            "bonus_used": False,
+            "draws_this_turn": 0,
+            "last_played": prev_last,
+        }
+
+    # Optional: quick helper to clear duel state when switching modes / restarting
+    def cd_clear_state(self) -> None:
+        """Clears all Card Duel specific state for this player."""
+        self.cd_deck = []
+        self.cd_hand = []
+        self.cd_discard = []
+        self.cd_status = []
+        self.cd_reset_turn_flags()
+
+    # Optional: lightweight validation (run manually or in a save() override if you want)
+    def cd_validate_state(self) -> None:
+        """Validates internal JSON structures for Card Duel state."""
+        for k in ("cd_deck", "cd_hand", "cd_discard"):
+            v = getattr(self, k, None)
+            if not isinstance(v, list):
+                raise ValueError(f"{k} must be a list")
+        if not isinstance(self.cd_status, list):
+            raise ValueError("cd_status must be a list")
+        if not isinstance(self.cd_turn_flags, dict):
+            raise ValueError("cd_turn_flags must be a dict")
+
 
 class BoardTile(models.Model):
+    """
+    Represents a single tile on the game board.
+    Stores the type of tile, its position, and any specific configuration/values.
+    """
     class TileType(models.TextChoices):
         START = "start", "Start"
         FINISH = "finish", "Finish"
@@ -1309,6 +1484,9 @@ class BoardTile(models.Model):
 
 
 class Question(models.Model):
+    """
+    Represents a quiz question (math or kanji) that can be triggered on Question tiles.
+    """
     DIFFICULTY_CHOICES = (
         ("easy", "Easy"),
         ("medium", "Medium"),
@@ -1359,6 +1537,9 @@ class Question(models.Model):
 
 
 class SupportCardType(models.Model):
+    """
+    Defines a type of support card available in the game (e.g., Bonus/Shop items).
+    """
     class EffectType(models.TextChoices):
         MOVE_EXTRA = "move_extra", "Move extra cells"
         HEAL = "heal", "Heal HP"
@@ -1395,6 +1576,9 @@ class SupportCardType(models.Model):
 
 
 class SupportCardInstance(models.Model):
+    """
+    Represents a specific instance of a support card owned by a player.
+    """
     card_type = models.ForeignKey(
         SupportCardType,
         on_delete=models.CASCADE,
@@ -1419,6 +1603,9 @@ class SupportCardInstance(models.Model):
 
 
 class GameLog(models.Model):
+    """
+    Logs significant game events for history and audit.
+    """
     class ActionType(models.TextChoices):
         CREATE_GAME = "create_game", "Create Game"
         JOIN_GAME = "join_game", "Join Game"
@@ -1474,6 +1661,9 @@ class GameLog(models.Model):
 # ============================
 
 class GameChatMessage(models.Model):
+    """
+    Stores chat messages for the in-game chat feature.
+    """
     game = models.ForeignKey(
         Game,
         on_delete=models.CASCADE,
@@ -1495,3 +1685,65 @@ class GameChatMessage(models.Model):
 
     def __str__(self):
         return f"[{self.game.code}] {self.user.username}: {self.message[:30]}"
+
+
+class CardDuelCardType(models.Model):
+    """
+    Defines a card type for the Card Duel game mode.
+    Includes category, effects, and parameters.
+    """
+    class Category(models.TextChoices):
+        PLUS_STATUS = "plus_status", "+ Status"
+        MINUS_STATUS = "minus_status", "- Status"
+        NEUTRAL = "neutral", "Neutral"
+        BONUS = "bonus", "Bonus"
+
+    class EffectType(models.TextChoices):
+        DAMAGE = "damage", "Damage"
+        HEAL = "heal", "Heal"
+        SHIELD = "shield", "Shield"
+        DRAW = "draw", "Draw"
+        APPLY_STATUS = "apply_status", "Apply Status"
+        CLEANSE = "cleanse", "Cleanse"
+        REMOVE_ENEMY_SHIELD = "remove_enemy_shield", "Remove Enemy Shield"
+        SWAP_SHIELD = "swap_shield", "Swap Shield"
+        HEAL_AND_SHIELD = "heal_and_shield", "Heal + Shield"
+        DISCARD_AND_DRAW = "discard_and_draw", "Discard & Draw"
+        GAMBLE = "gamble", "Gamble"
+        ANTIDOTE = "antidote", "Antidote"
+
+    # Stable unique code you store in JSON deck/hand, or you can store numeric id.
+    code = models.CharField(max_length=64, unique=True, db_index=True)
+
+    name = models.CharField(max_length=80)
+    description = models.TextField(blank=True)
+
+    category = models.CharField(
+        max_length=20,
+        choices=Category.choices,
+        default=Category.NEUTRAL,
+        db_index=True,
+    )
+
+    effect_type = models.CharField(
+        max_length=32,
+        choices=EffectType.choices,
+        default=EffectType.DAMAGE,
+    )
+
+    # Flexible parameters for your effect engine
+    # Examples:
+    # {"amount": 5}
+    # {"status": {"type":"poison","turns":3,"tick_damage":1,"stacks":1}}
+    params = models.JSONField(default=dict, blank=True)
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["category", "code"]
+
+    def __str__(self) -> str:
+        return f"[{self.code}] {self.name}"

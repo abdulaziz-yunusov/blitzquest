@@ -1,4 +1,13 @@
-// static/js/main.js
+/**
+ * =========================================================================
+ * MAIN SITE INTERACTIVITY
+ * =========================================================================
+ * Core scripts for the main site layout and landing page.
+ * - Sticky header shadow effect
+ * - User profile dropdown menu
+ * - Landing page chest animation cycle
+ */
+
 document.addEventListener("DOMContentLoaded", () => {
   // =========================
   // HEADER SHADOW
@@ -13,7 +22,33 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("scroll", updateHeaderShadow, { passive: true });
 
   // =========================
-  // CHEST ITEM LOOP (3s + 3s)
+  // USER DROPDOWN TOGGLE
+  // =========================
+  const userTrigger = document.querySelector(".user-menu-trigger");
+  const userDropdown = document.querySelector(".user-dropdown");
+
+  if (userTrigger && userDropdown) {
+    userTrigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isActive = userDropdown.classList.contains("active");
+
+      // Close all other dropdowns if any (future proofing)
+      document.querySelectorAll(".user-dropdown").forEach(d => d.classList.remove("active"));
+
+      if (!isActive) {
+        userDropdown.classList.add("active");
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!userDropdown.contains(e.target) && !userTrigger.contains(e.target)) {
+        userDropdown.classList.remove("active");
+      }
+    });
+  }
+
+  // =========================
+  // CHEST ITEM LOOP (Animation)
   // =========================
   const chest = document.getElementById("chest");
   if (!chest) return;
@@ -33,9 +68,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!chestImg || !itemImg || !closedSrc || !openSrc || items.length === 0) return;
 
-  // 🔧 VAQTLAR
-  const CLOSED_TIME = 2000; // 3 sekund yopiq
-  const OPEN_TIME   = 5000; // 3 sekund ochiq
+  // Animation Timings (in milliseconds)
+  const CLOSED_TIME = 2000;
+  const OPEN_TIME = 5000;
 
   let idx = 0;
 
@@ -53,10 +88,14 @@ document.addEventListener("DOMContentLoaded", () => {
     chestImg.src = closedSrc;
   }
 
-  // start holat
+  // Initial State
   closeChest();
   setItem(idx);
 
+  /**
+   * Recursive function to cycle through chest items.
+   * Opens chest -> Waits -> Closes chest -> Swaps item -> Repeats.
+   */
   function runCycle() {
     setTimeout(() => {
       openChest();

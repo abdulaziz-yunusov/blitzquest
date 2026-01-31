@@ -1,3 +1,13 @@
+/**
+ * =========================================================================
+ * GAME LOBBY LOGIC
+ * =========================================================================
+ * Handles the game lobby interface where players wait for the game to start.
+ * - Polls for player updates.
+ * - Updates the player list and host controls.
+ * - Toggles the "Start Game" button based on player count.
+ */
+
 function escapeHtml(str) {
     if (str === null || str === undefined) return "";
     return String(str)
@@ -8,6 +18,10 @@ function escapeHtml(str) {
         .replace(/'/g, "&#039;");
 }
 
+/**
+ * Updates the visual list of players in the lobby.
+ * @param {object} state - The current game state containing player data.
+ */
 function updateLobbyPlayers(state) {
     if (!state) return;
     const listEl = document.getElementById("player-list");
@@ -38,7 +52,7 @@ function updateLobbyPlayers(state) {
             }
 
             const statusBadge = p.is_alive
-                ? '<span class="badge badge-soft">Alive</span>'
+                ? '<span class="badge badge-soft badge-soft-success">Alive</span>'
                 : '<span class="badge badge-soft badge-soft-danger">Eliminated</span>';
 
             return `
@@ -79,6 +93,10 @@ function updateLobbyPlayers(state) {
     listEl.innerHTML = playersHtml || "<li>No players in this game yet.</li>";
 }
 
+/**
+ * Fetch the latest lobby state from the server.
+ * @param {string} gameId - The ID of the current game.
+ */
 async function fetchLobbyState(gameId) {
     try {
         const resp = await fetch(`/games/${gameId}/state/`, {
@@ -87,7 +105,7 @@ async function fetchLobbyState(gameId) {
         if (!resp.ok) return;
         const data = await resp.json();
 
-        // only care while waiting / active
+        // Only update UI if game is in pre-game states
         if (data.status === "waiting" || data.status === "active") {
             updateLobbyPlayers(data);
             updateLobbyStartUI(data);
@@ -96,10 +114,16 @@ async function fetchLobbyState(gameId) {
         console.error("Lobby state error:", e);
     }
 }
+
+/**
+ * Toggles the visibility of the "Start Game" button for the host.
+ * Only shows the button if there are at least 2 players.
+ * @param {object} state - The game state.
+ */
 function updateLobbyStartUI(state) {
     if (!state) return;
 
-    // 1. Ensure we only run this logic if the game is still in 'waiting' status
+    // Ensure we only run this logic if the game is still in 'waiting' status
     if (state.status !== "waiting") return;
 
     const players = Array.isArray(state.players) ? state.players : [];
@@ -107,9 +131,6 @@ function updateLobbyStartUI(state) {
 
     const startForm = document.getElementById("start-game-form");
     const hostHint = document.getElementById("host-wait-hint");
-
-    // Debugging: Uncomment the line below to see why it might be failing in your console
-    // console.log("Players:", players.length, "canStart:", canStart, "formExists:", !!startForm);
 
     if (startForm) {
         // Use 'block' or 'flex' instead of empty string to ensure it overrides 'display: none'
@@ -120,6 +141,7 @@ function updateLobbyStartUI(state) {
     }
 }
 
+// Initialize lobby polling on page load
 document.addEventListener("DOMContentLoaded", function () {
     if (typeof window.GAME_ID === "undefined") return;
 

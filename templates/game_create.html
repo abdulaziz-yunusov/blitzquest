@@ -3,22 +3,25 @@
 
 {% block title %}Create game – BlitzQuest{% endblock %}
 
+{# === Stylesheets === #}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/game_create.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="gc-page">
+  {# === Main Creation Form === #}
   <section class="gc-card gc-card-main">
     <h2 class="gc-title">Create a new game</h2>
     <p class="gc-subtitle">
-      Choose a mode, board length, and maximum number of players.
-      You’ll receive a lobby code to share with your friends.
+      Select your preferred game mode and customize the settings.
+      Share the generated lobby code with friends to start your BlitzQuest adventure!
     </p>
 
     <form method="post" class="gc-form" id="gc-create-form">
       {% csrf_token %}
 
+      {# Form Fields (excluding enabled_tiles) #}
       {% for field in form %}
       {% if field.name != 'enabled_tiles' %}
       <div class="gc-field" data-field-name="{{ field.name }}">
@@ -34,6 +37,7 @@
       {% endif %}
       {% endfor %}
 
+      {# Non-field Errors #}
       {% if form.non_field_errors %}
       <div class="gc-error-block">
         {% for error in form.non_field_errors %}
@@ -42,7 +46,7 @@
       </div>
       {% endif %}
 
-      <!-- Finish-line only summary -->
+      {# Finish Line Mode: Board Summary #}
       <div id="tiles-summary" class="gc-field" style="display:none;">
         <label>Board summary</label>
         <div class="gc-help" style="margin-top:6px;">
@@ -52,7 +56,7 @@
         </div>
       </div>
 
-      <!-- Enabled tiles (Finish-line only) -->
+      {# Finish Line Mode: Enabled Tiles Checkboxes #}
       <div class="form-group" id="enabled-tiles-block">
         <label>{{ form.enabled_tiles.label }}</label>
         <div class="checkbox-grid">
@@ -63,6 +67,7 @@
         {% endif %}
       </div>
 
+      {# Action Buttons #}
       <div class="gc-actions" id="gc-actions">
         <button type="submit" class="btn btn-primary">Create game</button>
         <a href="{% url 'game:game_list' %}" class="gc-secondary-link">
@@ -72,30 +77,38 @@
     </form>
   </section>
 
+  {# === Help Sidebar === #}
   <section class="gc-card gc-card-side">
-    <h3 class="gc-side-title">Quick rules</h3>
+    <h3 class="gc-side-title">Game Modes</h3>
     <ul class="gc-side-list">
-      <li>Supports <strong>2–4 players</strong>.</li>
-      <li>Players start with <strong>3 HP</strong>, <strong>0 coins</strong>, and a random support card.</li>
-      <li>On your turn, you <strong>roll the dice</strong>, move, and trigger the tile effect.</li>
-      <li>Question tiles give you a kanji/quiz question; correct answers reward coins or bonuses.</li>
-      <li>Traps, warps, and duels can change positions, reduce HP, or target other players.</li>
-      <li>
-        <strong>Finish mode</strong>: first to reach the final tile wins.
-        <strong>Survival mode</strong>: last player standing wins.
-      </li>
+      <li><strong>Custom Game</strong>: Race to the finish line! First player to reach the final tile wins. Customize
+        board length (20-80 tiles) and player count (2-4).</li>
+      <li><strong>Survival</strong>: Battle for survival on a looping 35-tile board. Last player standing wins. Choose
+        difficulty: Easy, Normal, or Hard.</li>
+      <li><strong>Draft Mode</strong>: Strategic card selection! Draft 3 support cards before the game begins, then race
+        to the finish.</li>
+      <li><strong>Card Duel</strong>: Pure strategy! Build your deck, play attack and bonus cards, and eliminate
+        opponents in turn-based combat.</li>
     </ul>
     <p class="gc-side-note">
-      You can adjust the exact rules and tile layout later in development.
+      Each mode features unique mechanics, tile effects, and strategic depth. Roll dice, answer questions, use support
+      cards, and outsmart your opponents!
     </p>
   </section>
 </div>
 
+{# === Form Logic Script === #}
 <script>
   (function () {
+    /**
+     * Dynamic form field visibility based on selected game mode
+     * - Custom Game: shows board_length, max_players, enabled_tiles
+     * - Survival: shows only survival_difficulty
+     * - Other modes: hide mode-specific fields
+     */
     const modeSel = document.getElementById("id_mode");
 
-    // Field wrappers created by the loop above
+    // Field wrappers
     const diffField = document.querySelector('.gc-field[data-field-name="survival_difficulty"]');
     const maxPlayersField = document.querySelector('.gc-field[data-field-name="max_players"]');
     const boardLenField = document.querySelector('.gc-field[data-field-name="board_length"]');
@@ -107,17 +120,20 @@
     const tileTypesEl = document.getElementById("tile-types");
 
     const boardLenInput = document.getElementById("id_board_length");
+    const maxPlayersInput = document.getElementById("id_max_players");
 
     function getEnabledTileCheckboxes() {
       return Array.from(document.querySelectorAll('input[name="enabled_tiles"]'));
     }
 
+    /**
+     * Updates the board summary display for Custom Game mode
+     */
     function updateTilesSummary() {
-      // Finish Line can be variable length now
       const total = parseInt((boardLenInput && boardLenInput.value) || "36", 10);
       const safeTotal = Number.isFinite(total) ? total : 36;
 
-      // Start + Finish are fixed in Finish Line
+      // Start + Finish are fixed
       const generated = Math.max(0, safeTotal - 2);
 
       if (tileCountEl) {
@@ -142,14 +158,15 @@
       tileTypesEl.textContent = types.join(", ");
     }
 
+    /**
+     * Shows/hides form fields based on selected game mode
+     */
     function syncModeUI() {
       const mode = modeSel ? modeSel.value : "finish";
       const isFinish = (mode === "finish");
       const isSurvival = (mode === "survival");
 
-      // ✅ Your new requirement:
-      // Finish Line: show board_length + max_players + enabled tiles + summary
-      // Survival: show mode + survival_difficulty ONLY
+      // Show/hide mode-specific fields
       if (diffField) diffField.style.display = isSurvival ? "" : "none";
       if (boardLenField) boardLenField.style.display = isFinish ? "" : "none";
       if (maxPlayersField) maxPlayersField.style.display = isFinish ? "" : "none";
@@ -157,25 +174,36 @@
       if (enabledTilesBlock) enabledTilesBlock.style.display = isFinish ? "" : "none";
       if (tilesSummary) tilesSummary.style.display = isFinish ? "" : "none";
 
+      // Enforce max_players constraints for Custom mode (2-4 players)
+      if (maxPlayersInput && isFinish) {
+        maxPlayersInput.setAttribute("min", "2");
+        maxPlayersInput.setAttribute("max", "4");
+        const currentValue = parseInt(maxPlayersInput.value) || 4;
+        if (currentValue > 4) {
+          maxPlayersInput.value = "4";
+        } else if (currentValue < 2) {
+          maxPlayersInput.value = "2";
+        }
+      }
+
       if (isFinish) updateTilesSummary();
     }
 
+    // Event listeners
     if (modeSel) {
       modeSel.addEventListener("change", syncModeUI);
     }
 
-    // Update summary if tiles selection changes
     getEnabledTileCheckboxes().forEach(cb => {
       cb.addEventListener("change", updateTilesSummary);
     });
 
-    // Update summary if board length changes
     if (boardLenInput) {
       boardLenInput.addEventListener("input", updateTilesSummary);
       boardLenInput.addEventListener("change", updateTilesSummary);
     }
 
-    // Init
+    // Initialize
     syncModeUI();
     updateTilesSummary();
   })();

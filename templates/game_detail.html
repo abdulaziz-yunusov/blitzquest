@@ -66,16 +66,15 @@
                 <div class="game-btn-group">
                     {% if is_host %}
                     <div id="host-start-wrap">
-                        {% if players.count >= 2 %}
-                        <form id="start-game-form" method="post" action="{% url 'game:game_start' game.id %}">
+                        <form id="start-game-form" method="post" action="{% url 'game:game_start' game.id %}"
+                            style="display: {% if players.count >= 2 %}block{% else %}none{% endif %};">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-primary">Start game</button>
                         </form>
-                        {% else %}
-                        <div class="game-hint" id="host-wait-hint">
+                        <div class="game-hint" id="host-wait-hint"
+                            style="display: {% if players.count >= 2 %}none{% else %}block{% endif %};">
                             Waiting for <strong>2+</strong> players...
                         </div>
-                        {% endif %}
                     </div>
                     {% endif %}
                 </div>
@@ -172,7 +171,7 @@
                         </span>
                         <span class="player-stat">
                             {% if p.is_alive %}
-                            <span class="badge badge-soft">Alive</span>
+                            <span class="badge badge-soft badge-soft-success">Alive</span>
                             {% else %}
                             <span class="badge badge-soft badge-soft-danger">Eliminated</span>
                             {% endif %}
@@ -262,9 +261,9 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/kjua@0.9.0/dist/kjua.min.js"></script>
 <script>
-    window.GAME_ID = {{game.id|safe}};
-    window.GAME_HOST_USER_ID = {{game.host_id|default:"null"|safe}};
-    window.GAME_MAX_PLAYERS = {{game.max_players|safe}};
+    window.GAME_ID = {{ game.id|safe }};
+    window.GAME_HOST_USER_ID = {{ game.host_id|default:"null"|safe }};
+    window.GAME_MAX_PLAYERS = {{ game.max_players|safe }};
     window.GAME_CODE = "{{game.code|safe}}";
 
     // Generate QR Code if the QR container exists (only in 'waiting' status)

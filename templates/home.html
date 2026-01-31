@@ -3,55 +3,58 @@
 
 {% block title %}BlitzQuest – Home{% endblock %}
 
+{% block body_class %}home-body{% endblock %}
+{% block main_class %}full-width{% endblock %}
+
 {% block content %}
+{# === Hero Section === #}
 <section class="hero">
-  <!-- ================= LEFT SIDE ================= -->
-  <div class="hero-left">
-    <div class="hero-eyebrow">2–4 Player Online Board Game</div>
+  <div class="content-container hero-inner">
+    {# Left: Text Content #}
+    <div class="hero-left">
+      <div class="hero-eyebrow">2–4 Player Online Board Game</div>
 
-    <h1 class="hero-title">
-      Roll the dice.<br>
-      <span class="hero-highlight">Answer fast.</span><br>
-      Outthink your rivals.
-    </h1>
+      <h1 class="hero-title">
+        Roll the dice.<br>
+        <span class="hero-highlight">Answer fast.</span><br>
+        Outthink your rivals.
+      </h1>
 
-    <p class="hero-subtitle">
-      BlitzQuest is a tactical knowledge board game built with Django.
-      Move across the board, survive tricky tiles, and use support cards to
-      sabotage your friends or secure the win.
-    </p>
+      <p class="hero-subtitle">
+        BlitzQuest is a tactical knowledge board game built with Django.
+        Move across the board, survive tricky tiles, and use support cards to
+        sabotage your friends or secure the win.
+      </p>
 
-    <div class="hero-actions">
-      {% if user.is_authenticated %}
+      {# Action Buttons #}
+      <div class="hero-actions">
+        {% if user.is_authenticated %}
         <a href="{% url 'game:game_create' %}" class="btn btn-primary hero-btn-main">
           Create new game
         </a>
         <a href="{% url 'game:game_join' %}" class="btn btn-secondary hero-btn-secondary">
           Join with code
         </a>
-      {% else %}
+        {% else %}
         <a href="/accounts/login/" class="btn btn-primary hero-btn-main">
           Login to start playing
         </a>
-      {% endif %}
-    </div>
+        {% endif %}
+      </div>
 
-    {% if user.is_authenticated %}
+      {# Secondary Link #}
+      {% if user.is_authenticated %}
       <p class="hero-small">
         Or <a href="{% url 'game:game_list' %}">view existing games</a>
         you are already part of.
       </p>
-    {% endif %}
-  </div>
+      {% endif %}
+    </div>
 
-  <!-- ================= RIGHT SIDE (CHEST) ================= -->
-  <div class="hero-right">
-    <div
-      class="chest-wrap"
-      id="chest"
-      data-closed="{% static 'images/box_closed.png' %}"
-      data-open="{% static 'images/open.png' %}"
-      data-items='[
+    {# Right: Animated Chest #}
+    <div class="hero-right">
+      <div class="chest-wrap" id="chest" data-closed="{% static 'images/box_closed.png' %}"
+        data-open="{% static 'images/open.png' %}" data-items='[
         "{% static "images/coin.png" %}",
         "{% static "images/heal.png" %}",
         "{% static "images/move.png" %}",
@@ -59,83 +62,79 @@
         "{% static "images/reroll.png" %}",
         "{% static "images/shield.png" %}",
         "{% static "images/swap.png" %}"
-      ]'
-    >
-      <!-- 🔽 QUTI -->
-      <img
-        class="chest-visual"
-        src="{% static 'images/box_closed.png' %}"
-        alt="Chest"
-      />
+      ]'>
+        <img class="chest-visual" src="{% static 'images/box_closed.png' %}" alt="Chest" />
 
-      <!-- 🔽 CHIQADIGAN ITEM -->
-      <img
-        class="chest-item"
-        src="{% static 'images/coin.png' %}"
-        alt="Item"
-      />
+        <img class="chest-item" src="{% static 'images/coin.png' %}" alt="Item" />
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ================= FEATURES ================= -->
-<section class="feature-section">
-  <h2 class="section-title">How a match works</h2>
+{# === Features Section === #}
+<div class="content-container">
+  <section class="feature-section">
+    <h2 class="section-title">How a match works</h2>
 
-  <div class="feature-grid">
-    <div class="feature-card">
-      <div class="feature-step-label">Step 1</div>
-      <h3>Create or join</h3>
-      <p>
-        One player creates a lobby and shares the game code.
-        Up to four players join from any browser.
-      </p>
+    <div class="feature-grid">
+      {# Step 1 #}
+      <div class="feature-card">
+        <div class="feature-step-label">Step 1</div>
+        <h3>Create or join</h3>
+        <p>
+          One player creates a lobby and shares the game code.
+          Up to four players join from any browser.
+        </p>
+      </div>
+
+      {# Step 2 #}
+      <div class="feature-card">
+        <div class="feature-step-label">Step 2</div>
+        <h3>Roll & move</h3>
+        <p>
+          On your turn, roll the dice, move your token,
+          and trigger tile effects like questions and traps.
+        </p>
+      </div>
+
+      {# Step 3 #}
+      <div class="feature-card">
+        <div class="feature-step-label">Step 3</div>
+        <h3>Answer & outplay</h3>
+        <p>
+          Answer blitz questions to gain coins,
+          buy support cards, heal up, or push opponents into danger.
+        </p>
+      </div>
+
+      {# Step 4 #}
+      <div class="feature-card">
+        <div class="feature-step-label">Step 4</div>
+        <h3>Reach the goal</h3>
+        <p>
+          Be the first to reach the finish tile,
+          or survive while others run out of HP — depending on the mode.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  {# === Info Strip === #}
+  <section class="info-strip">
+    <div class="info-item">
+      <span class="info-label">Players</span>
+      <span class="info-value">2–4</span>
     </div>
 
-    <div class="feature-card">
-      <div class="feature-step-label">Step 2</div>
-      <h3>Roll & move</h3>
-      <p>
-        On your turn, roll the dice, move your token,
-        and trigger tile effects like questions and traps.
-      </p>
+    <div class="info-item">
+      <span class="info-label">Tech stack</span>
+      <span class="info-value">Django + PostgreSQL / SQLite</span>
     </div>
 
-    <div class="feature-card">
-      <div class="feature-step-label">Step 3</div>
-      <h3>Answer & outplay</h3>
-      <p>
-        Answer blitz questions to gain coins,
-        buy support cards, heal up, or push opponents into danger.
-      </p>
+    <div class="info-item">
+      <span class="info-label">Game Modes</span>
+      <span class="info-value">Card Duel, Custom, Survival & Draft</span>
     </div>
-
-    <div class="feature-card">
-      <div class="feature-step-label">Step 4</div>
-      <h3>Reach the goal</h3>
-      <p>
-        Be the first to reach the finish tile,
-        or survive while others run out of HP — depending on the mode.
-      </p>
-    </div>
-  </div>
-</section>
-
-<!-- ================= INFO STRIP ================= -->
-<section class="info-strip">
-  <div class="info-item">
-    <span class="info-label">Players</span>
-    <span class="info-value">2–4</span>
-  </div>
-
-  <div class="info-item">
-    <span class="info-label">Tech stack</span>
-    <span class="info-value">Django + PostgreSQL / SQLite</span>
-  </div>
-
-  <div class="info-item">
-    <span class="info-label">Game Modes</span>
-    <span class="info-value">Custom, Survival & Draft</span>
-  </div>
-</section>
+  </section>
+</div>
 {% endblock %}

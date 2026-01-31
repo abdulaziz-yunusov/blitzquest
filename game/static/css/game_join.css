@@ -1,4 +1,10 @@
-/* ========== Game Join Page – BlitzQuest ========== */
+/* 
+   =========================================================================
+   GAME JOIN PAGE
+   =========================================================================
+   - Interface for users to enter a game code and join an existing session.
+   - Includes form styling, validation feedback, and feature highlights.
+*/
 
 .gj-page {
     margin-top: 1.5rem;
@@ -7,7 +13,12 @@
     gap: 1.3rem;
 }
 
-/* Cards */
+/* 
+   =========================================================================
+   CARD STYLES
+   =========================================================================
+   - Primary container styles with glassmorphism effects.
+*/
 
 .gj-card {
     border-radius: 20px;
@@ -26,7 +37,11 @@
             rgba(15, 23, 42, 0.96));
 }
 
-/* Main form card */
+/* 
+   =========================================================================
+   MAIN FORM SECTION
+   =========================================================================
+*/
 
 .gj-title {
     margin: 0 0 0.3rem;
@@ -77,6 +92,7 @@
     opacity: 0.72;
 }
 
+/* Validation Feedback */
 .gj-error,
 .gj-error-block {
     font-size: 0.8rem;
@@ -100,7 +116,12 @@
     opacity: 0.85;
 }
 
-/* Side info card */
+/* 
+   =========================================================================
+   SIDE INFORMATION SECTION
+   =========================================================================
+   - Additional context or instructions for joining.
+*/
 
 .gj-side-title {
     margin: 0 0 0.6rem;
@@ -132,8 +153,10 @@
             rgba(148, 163, 184, 0));
 }
 
-/* Responsive */
-
+/* 
+   Responsive Adjustments
+   - Stack layout on smaller screens.
+*/
 @media (max-width: 900px) {
     .gj-page {
         grid-template-columns: minmax(0, 1fr);

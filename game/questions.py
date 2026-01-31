@@ -1,6 +1,19 @@
 import random
 
 def generate_math_question(difficulty="normal"):
+    """
+    Generates a random math question (addition, subtraction, multiplication) based on difficulty.
+
+    Args:
+        difficulty (str): "easy", "normal", or "hard".
+
+    Returns:
+        dict: A dictionary containing:
+            - id (str): Unique question ID.
+            - prompt (str): The question text (e.g., "What is 5 + 3?").
+            - choices (list): List of 4 answer choices (strings).
+            - correct_index (int): Index of the correct answer in the choices list.
+    """
     if difficulty == "easy":
         a = random.randint(1, 12)
         b = random.randint(1, 12)

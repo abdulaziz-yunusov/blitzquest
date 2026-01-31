@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Card Duel – Game {{ game.code }}{% endblock %}
+
+{# === Stylesheets === #}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/game_board.css' %}">
+<link rel="stylesheet" href="{% static 'css/card_duel.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="board-page">
+    {# === Game Header === #}
+    <section class="board-header">
+        <div class="board-header-left">
+            <div class="game-avatar">{{ game.code|slice:":2" }}</div>
+            <div>
+                <h2 class="board-title">Game {{ game.code }}</h2>
+                <div class="board-subtitle">
+                    {{ game.get_mode_display }} mode • {{ game.players.count }}/{{ game.max_players }} players
+                </div>
+            </div>
+        </div>
+        <div class="board-header-right">
+            <span class="badge badge-status badge-{{ game.status }}">
+                {{ game.get_status_display }}
+            </span>
+            <a href="{% url 'game:game_detail' game.id %}" class="btn btn-secondary btn-sm">
+                Back to lobby
+            </a>
+        </div>
+    </section>
+
+    {# === Main Board Layout === #}
+    <section class="board-layout">
+
+        {# === Left Sidebar: Turn Info, Players, Chat === #}
+        <aside class="board-inventory">
+            {# Turn Display #}
+            <div class="sidebar-section">
+                <h3>Turn</h3>
+                <div id="current-turn-label" class="current-turn-label">Loading…</div>
+                <div class="dice-display-wrapper">
+                    <div id="dice-display" class="dice-display" data-has-value="1">
+                        <div id="dice-text" class="dice-text">Card Duel</div>
+                    </div>
+                </div>
+            </div>
+
+            {# Player List #}
+            <div class="sidebar-section">
+                <h3>Duelists</h3>
+                <div class="sidebar-player-count">
+                    <span id="player-count">{{ game.players.count }} / {{ game.max_players }}</span>
+                </div>
+                <ul class="player-list" id="player-list"></ul>
+            </div>
+
+            {# In-Game Chat #}
+            <div class="sidebar-section chat-section">
+                <div class="ig-chat" id="igChat">
+                    <div class="ig-chat-header">
+                        <div class="ig-chat-left">
+                            <div class="ig-chat-avatar">GC</div>
+                            <div class="ig-chat-titlewrap">
+                                <div class="ig-chat-title">Game chat</div>
+                                <div class="ig-chat-sub">Live • <span id="chatLiveCount">0</span> messages</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="chatMessages" class="ig-chat-body" aria-live="polite"></div>
+
+                    <form id="chatForm" class="ig-chat-inputrow" autocomplete="off">
+                        <div class="ig-compose" role="group" aria-label="Message input">
+                            <input id="chatInput" class="ig-chat-input" type="text" placeholder="Message."
+                                maxlength="500" autocomplete="off" required>
+                        </div>
+                        <button type="submit" id="chatSendBtn" class="ig-send-icon" aria-label="Send" disabled>
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path
+                                    d="M21.8 2.2a1 1 0 0 0-1.05-.2L2.6 9.2a1 1 0 0 0 .02 1.87l7.3 2.7 2.7 7.3a1 1 0 0 0 1.87.02L22 3.25a1 1 0 0 0-.2-1.05ZM11.1 12.9 5.4 10.8 19 5.6 11.1 12.9Zm2.1 5.7-2.1-5.7L18.4 5.6l-5.2 13Z" />
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </aside>
+
+        {# === Main Duel Arena === #}
+        <main class="board-main">
+            <div class="board-main-wrap">
+                <div class="board-main-header">
+                    <h3 class="section-title">Card Duel</h3>
+                    <div class="section-subtitle">Play cards to reduce enemy HP to 0.</div>
+                </div>
+
+                {# Card Duel Board #}
+                <div id="card-duel-root" class="cd-table card-duel-board">
+                    {# Top Bar: End Turn Button #}
+                    <section class="cd-topbar">
+                        <div class="cd-topbar-right">
+                            <button type="button" class="btn btn-primary" id="cd-endturn-btn">End turn</button>
+                        </div>
+                    </section>
+
+                    {# Opponent's Hand (Face Down) #}
+                    <section class="duel-opponent">
+                        <div id="cd-opp-hand-cards" class="cd-hand-row cd-hand-row--opp"></div>
+                    </section>
+
+                    {# Battlefield: Last Played Cards #}
+                    <section class="duel-battlefield">
+                        <div class="cd-pile">
+                            <div id="cd-last-played-opp" class="cd-play-slot"></div>
+                            <div id="cd-last-played-you" class="cd-play-slot"></div>
+                        </div>
+                        <div class="cd-centertext">
+                            <div class="cd-hint" id="cd-turn-hint"></div>
+                            <div id="cd-feedback" class="qfeedback"></div>
+                        </div>
+                    </section>
+
+                    {# Your Hand (Face Up) #}
+                    <section class="duel-hand">
+                        <div id="cd-hand" class="cd-hand-row cd-hand-row--you"></div>
+                    </section>
+
+                </div>
+
+            </div>
+        </main>
+    </section>
+</div>
+
+{# === Draft Modal: Card Selection === #}
+<div id="draftModal" class="qmodal is-hidden" aria-hidden="true">
+    <div class="qmodal-backdrop"></div>
+    <div class="qmodal-card" role="dialog" aria-modal="true" aria-labelledby="draftTitle">
+        <div class="qmodal-header">
+            <h3 id="draftTitle">Choose starting cards</h3>
+            <span id="draftSub" class="smodal-subtitle" style="margin-left:auto;"></span>
+        </div>
+        <div class="qmodal-body">
+            <div id="draftChoices" class="qchoices"></div>
+            <p id="draftFeedback" class="qfeedback"></p>
+        </div>
+    </div>
+</div>
+
+{# === Game Over Modal: Final Results === #}
+<div id="finishModal" class="qmodal is-hidden" aria-hidden="true" style="z-index: 9999;">
+    <div class="qmodal-backdrop"></div>
+    <div class="qmodal-card" role="dialog" aria-modal="true" aria-labelledby="finishTitle">
+        <div class="qmodal-header">
+            <h3 id="finishTitle">Game Over</h3>
+            <button type="button" id="finishCloseBtn" class="qclose-btn" aria-label="Close"
+                style="background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s;">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"
+                    style="width: 24px; height: 24px;">
+                    <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="qmodal-body">
+            <p class="finish-subtitle">Final Standings</p>
+            <div class="table-responsive">
+                <table class="bq-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th>HP</th>
+                            <th>Shield</th>
+                            <th>Deck</th>
+                            <th>Hand</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="finishLeaderboardBody"></tbody>
+                </table>
+            </div>
+            <div class="qmodal-actions" style="margin-top: 2rem;">
+                <a href="{% url 'game:game_list' %}" id="backToLobbyBtn" class="btn btn-primary">Exit to Lobby</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{# === JavaScript Configuration & Scripts === #}
+{% block extra_js %}
+<script>
+    // Game configuration for client-side scripts
+    window.GAME_ID = {{ game.id | safe }};
+    window.GAME_HOST_USER_ID = {{ game.host_id |default: "null" | safe }};
+    window.GAME_MAX_PLAYERS = {{ game.max_players | safe }};
+    window.STATIC_URL = "{% static '' %}";
+    window.CD_BACK_URL = "{% static 'images/CardDuelCards/back.png' %}";
+</script>
+<script src="{% static 'js/game_state.js' %}"></script>
+<script src="{% static 'js/chat.js' %}"></script>
+<script src="{% static 'js/card_duel.js' %}"></script>
+{% endblock %}

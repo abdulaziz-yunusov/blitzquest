@@ -56,4 +56,10 @@ urlpatterns = [
     # Chat
     path("games/<int:game_id>/chat/messages/", views.game_chat_messages, name="game_chat_messages"),
     path("games/<int:game_id>/chat/send/", views.game_chat_send, name="game_chat_send"),
+
+    # Card Duel
+    path("games/<int:game_id>/card-duel/play-card/", views.card_duel_play_card, name="card_duel_play_card"),
+    path("games/<int:game_id>/card-duel/end-turn/", views.card_duel_end_turn, name="card_duel_end_turn"),
+    path("games/<int:game_id>/card-duel/pick/", views.card_duel_pick, name="card_duel_pick"),
+
 ]

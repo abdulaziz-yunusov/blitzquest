@@ -3,6 +3,7 @@
 
 {% block title %}FAQ - BlitzQuest{% endblock %}
 
+{# === Stylesheets === #}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/faq.css' %}">
 {% endblock %}
@@ -12,7 +13,7 @@
 
 {% block content %}
 <div class="faq-container">
-    <!-- Header Section -->
+    {# === Page Header === #}
     <div class="faq-header">
         <div class="faq-header-content">
             <h1 class="faq-title">
@@ -26,10 +27,10 @@
         </a>
     </div>
 
-    <!-- FAQ Accordion -->
+    {# === FAQ Content === #}
     <div class="faq-content">
         <div class="faq-accordion">
-            <!-- Question 1 -->
+            {# Q1: What is BlitzQuest? #}
             <div class="faq-item">
                 <button class="faq-question" onclick="toggleFaq(this)">
                     <span class="faq-q-text">What is BlitzQuest?</span>
@@ -42,7 +43,7 @@
                 </div>
             </div>
 
-            <!-- Question 2 -->
+            {# Q2: How to Start Playing #}
             <div class="faq-item">
                 <button class="faq-question" onclick="toggleFaq(this)">
                     <span class="faq-q-text">How do I start playing?</span>
@@ -60,7 +61,7 @@
                 </div>
             </div>
 
-            <!-- Question 3 -->
+            {# Q3: Game Modes #}
             <div class="faq-item">
                 <button class="faq-question" onclick="toggleFaq(this)">
                     <span class="faq-q-text">What game modes are available?</span>
@@ -77,7 +78,7 @@
                 </div>
             </div>
 
-            <!-- Question 4 -->
+            {# Q4: Scoring System #}
             <div class="faq-item">
                 <button class="faq-question" onclick="toggleFaq(this)">
                     <span class="faq-q-text">How is scoring calculated?</span>
@@ -94,7 +95,7 @@
                 </div>
             </div>
 
-            <!-- Question 5 -->
+            {# Q5: Mobile Compatibility #}
             <div class="faq-item">
                 <button class="faq-question" onclick="toggleFaq(this)">
                     <span class="faq-q-text">Can I play on mobile devices?</span>
@@ -107,7 +108,7 @@
                 </div>
             </div>
 
-            <!-- Question 6 -->
+            {# Q6: Progress Tracking #}
             <div class="faq-item">
                 <button class="faq-question" onclick="toggleFaq(this)">
                     <span class="faq-q-text">How do I track my progress?</span>
@@ -124,7 +125,7 @@
                 </div>
             </div>
 
-            <!-- Question 7 -->
+            {# Q7: Time Limits #}
             <div class="faq-item">
                 <button class="faq-question" onclick="toggleFaq(this)">
                     <span class="faq-q-text">Is there a time limit for answering?</span>
@@ -137,7 +138,7 @@
                 </div>
             </div>
 
-            <!-- Question 8 -->
+            {# Q8: Performance Tips #}
             <div class="faq-item">
                 <button class="faq-question" onclick="toggleFaq(this)">
                     <span class="faq-q-text">How can I improve my performance?</span>
@@ -155,7 +156,7 @@
                 </div>
             </div>
 
-            <!-- Question 9 -->
+            {# Q9: Technical Support #}
             <div class="faq-item">
                 <button class="faq-question" onclick="toggleFaq(this)">
                     <span class="faq-q-text">What if I encounter a bug or technical issue?</span>
@@ -172,7 +173,7 @@
                 </div>
             </div>
 
-            <!-- Question 10 -->
+            {# Q10: Playing with Friends #}
             <div class="faq-item">
                 <button class="faq-question" onclick="toggleFaq(this)">
                     <span class="faq-q-text">Can I play with friends?</span>
@@ -186,7 +187,7 @@
             </div>
         </div>
 
-        <!-- CTA Section -->
+        {# === Call to Action === #}
         <div class="faq-cta">
             <h3>Still have questions?</h3>
             <p>Contact our support team for more help</p>
@@ -195,7 +196,12 @@
     </div>
 </div>
 
+{# === FAQ Toggle Script === #}
 <script>
+    /**
+     * Toggles FAQ accordion items open/closed
+     * Implements single-item-open behavior (accordion pattern)
+     */
     function toggleFaq(button) {
         const item = button.parentElement;
         const answer = item.querySelector('.faq-answer');

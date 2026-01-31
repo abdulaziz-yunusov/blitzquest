@@ -3,13 +3,18 @@
 {% block body_class %}auth-body{% endblock %}
 
 {% block title %}Sign up – BlitzQuest{% endblock %}
+
+{# --- Page Specific CSS --- #}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/auth.css' %}">
 {% endblock %}
+
 {% block main_class %}full-width{% endblock %}
+
 {% block content %}
 <div class="auth-page">
     <div class="auth-card">
+        {# --- Header Section --- #}
         <div class="auth-card-header">
             <h2 class="auth-title">Create account</h2>
             <p class="auth-subtitle">
@@ -17,13 +22,16 @@
             </p>
         </div>
 
+        {# --- Signup Form (Fields Loop) --- #}
         <form method="post" class="auth-form">
             {% csrf_token %}
 
+            {# Loop through form fields #}
             {% for field in form %}
             <div class="form-row">
                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
 
+                {# Check if field is a password field for toggle wrapper #}
                 {% if "password" in field.name|lower %}
                 <div class="password-wrapper">
                     {{ field }}
@@ -39,9 +47,11 @@
                     </button>
                 </div>
                 {% else %}
+                {# Regular Field #}
                 {{ field }}
                 {% endif %}
 
+                {# Field Errors #}
                 {% for error in field.errors %}
                 <div class="message message-error" style="font-size: 0.8rem; color: #f87171;">
                     {{ error }}
@@ -50,18 +60,19 @@
             </div>
             {% endfor %}
 
+            {# Toggle Script (Reusable for multiple password fields) #}
             <script>
                 function togglePasswordVisibility(btn, inputId) {
                     const passwordInput = document.getElementById(inputId);
                     const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
                     passwordInput.setAttribute('type', type);
-
                     btn.innerHTML = type === 'password' ?
                         `<svg class="eye-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>` :
                         `<svg class="eye-off-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>`;
                 }
             </script>
 
+            {# Non-field Errors #}
             {% if form.non_field_errors %}
             <div class="message message-error" style="margin-top: 1rem; font-size: 0.85rem;">
                 {% for error in form.non_field_errors %}
@@ -75,6 +86,7 @@
             </div>
         </form>
 
+        {# Login Link #}
         <div class="auth-switch">
             Already have an account?
             <a href="{% url 'login' %}">Login</a>

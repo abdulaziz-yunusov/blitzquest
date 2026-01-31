@@ -2,6 +2,8 @@ import secrets
 import string
 import json
 import random
+import re
+from urllib import request
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -12,10 +14,13 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 from django.templatetags.static import static
 
+from .card_duel_seed import seed_card_duel_cards
+
+
 from django.db import transaction
 from django.http import HttpResponse
 
-
+from . import card_duel
 
 from .forms import GameCreateForm, JoinGameForm
 
@@ -25,11 +30,17 @@ from .models import (
     BoardTile,
     SupportCardInstance,
     SupportCardType,
-    GameChatMessage,   # ✅ CHAT
+    GameChatMessage,
+    CardDuelCardType,
 )
+import game
 
 
 def signup(request):
+    """
+    Handles user registration via a standard form.
+    Logs the user in automatically upon successful signup.
+    """
     if request.method == "POST":
         form = UserCreationForm(request.POST)
         if form.is_valid():
@@ -43,6 +54,10 @@ def signup(request):
 
 
 def password_reset_request(request):
+    """
+    Initiates the password reset flow by verifying the username.
+    Stores user ID in session for the confirmation step.
+    """
     if request.method == "POST":
         username = request.POST.get("username")
         User = get_user_model()
@@ -56,6 +71,9 @@ def password_reset_request(request):
 
 
 def password_reset_confirm(request):
+    """
+    Completes the password reset process for the user in the session.
+    """
     reset_user_id = request.session.get("reset_user_id")
     if not reset_user_id:
         return redirect("game:password_reset_request")
@@ -79,6 +97,10 @@ def password_reset_confirm(request):
 
 @login_required
 def profile(request):
+    """
+    Displays and updates the user's profile and game statistics.
+    Handles profile picture uploads and basic info updates.
+    """
     user = request.user
     from .models import Profile
 
@@ -168,12 +190,41 @@ def profile(request):
 
 
 def generate_game_code(length: int = 6) -> str:
+    """Generates a random alphanumeric code of given length."""
     alphabet = string.ascii_uppercase + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 SURVIVAL_LEN = 35
+CARD_DUEL_START_HP = 20
+CARD_DUEL_START_HAND = 5
+
+def build_card_duel_deck_codes() -> list[str]:
+    """
+    Returns a list of card type codes for a full Card Duel deck.
+    """
+    # full 20-card deck = all active card duel types
+    # We store card codes in PlayerInGame JSON fields
+    return list(
+        CardDuelCardType.objects.filter(is_active=True)
+        .order_by("category", "code")
+        .values_list("code", flat=True)
+    )
+
+def draw_cards_from_deck(deck: list, n: int) -> tuple[list, list]:
+    """
+    Draws n cards from the top of the deck.
+    Returns (drawn_cards, remaining_deck).
+    """
+    # returns (drawn, remaining_deck)
+    n = max(0, int(n or 0))
+    drawn = deck[:n]
+    remaining = deck[n:]
+    return drawn, remaining
 
 def _tile_weights_for(game: Game):
+    """
+    Determines probability weights for board tile generation based on game mode and difficulty.
+    """
     # Base weights (Normal)
     weights = {
         BoardTile.TileType.QUESTION: 3,
@@ -275,6 +326,10 @@ def enrich_draft_options(state: dict) -> dict:
     return state
 
 def deal_draft_options(game, player, k=3):
+    """
+    Selects k unique support card options for a player to draft.
+    Avoids cards the player already owns.
+    """
     from .models import SupportCardType, SupportCardInstance
 
     owned_type_ids = set(
@@ -292,6 +347,9 @@ def deal_draft_options(game, player, k=3):
 @login_required
 @require_POST
 def draft_pick(request, game_id):
+    """
+    API endpoint for a player to select a card during the draft phase.
+    """
     from .models import Game, SupportCardType, SupportCardInstance
 
     game = Game.objects.select_related().get(id=game_id)
@@ -348,6 +406,10 @@ def draft_pick(request, game_id):
     })
 
 def create_default_board_for_game(game: Game, enabled_tiles=None):
+    """
+    Generates and populates the board tiles for a game instance based on configuration.
+    Handles mode-specific rules and tile weights.
+    """
     # ✅ IMPORTANT: clear old tiles
     game.tiles.all().delete()
 
@@ -441,11 +503,15 @@ def create_default_board_for_game(game: Game, enabled_tiles=None):
     BoardTile.objects.bulk_create(tiles)
 
 def home(request):
+    """Renders the landing page."""
     return render(request, "home.html")
 
 
 @login_required
 def game_list(request):
+    """
+    Displays a list of games the user can join or is already part of.
+    """
     waiting_games = Game.objects.filter(status=Game.Status.WAITING).order_by("-created_at")
     my_games = Game.objects.filter(players__user=request.user).distinct().order_by("-created_at")
 
@@ -455,6 +521,10 @@ def game_list(request):
 
 @login_required
 def game_create(request):
+    """
+    Handles the creation of a new game via form submission.
+    Initializes the game, assigns a code, and adds the creator as the first player.
+    """
     if request.method == "POST":
         form = GameCreateForm(request.POST)
         if form.is_valid():
@@ -493,6 +563,9 @@ def game_create(request):
 
 @login_required
 def game_join(request):
+    """
+    Allows a user to join an existing game by entering its code.
+    """
     if request.method == "POST":
         form = JoinGameForm(request.POST)
         if form.is_valid():
@@ -548,6 +621,10 @@ def _join_game_logic(request, code):
 
 @login_required
 def game_detail(request, game_id: int):
+    """
+    Displays the game lobby or main detail view.
+    Checks user permissions and prepares initial context.
+    """
     game = get_object_or_404(Game, id=game_id)
     players = game.players.select_related("user").order_by("turn_order")
     tiles = game.tiles.order_by("position")
@@ -576,6 +653,7 @@ def game_detail(request, game_id: int):
 
 
 def seed_support_cards():
+    """Seeds the initial set of SupportCardTypes into the database."""
     SupportCardType.objects.get_or_create(
         code="move_extra",
         defaults=dict(
@@ -651,6 +729,10 @@ def seed_support_cards():
 @login_required
 @require_POST
 def game_start(request, game_id: int):
+    """
+    Transitions the game from WAITING to ACTIVE (or DRAFTING).
+    Initializes board, support cards, and player states.
+    """
     game = get_object_or_404(Game, id=game_id)
 
     if request.method != "POST":
@@ -665,16 +747,26 @@ def game_start(request, game_id: int):
         messages.error(request, "Need at least 2 players to start the game.")
         return redirect("game:game_detail", game_id=game.id)
 
-    # 1) Ensure support cards exist
+    # 1 Ensure support cards exist
     seed_support_cards()
 
-    # 2) Generate the board (same rule you had)
-    if game.mode in (Game.Mode.SURVIVAL, Game.Mode.DRAFT):
+    if game.mode == Game.Mode.CARD_DUEL:
+        try:
+            card_duel.start_game(game)
+        except RuntimeError as e:
+            # Dev-friendly: fail loudly instead of silently continuing to UI
+            return JsonResponse({"detail": str(e)}, status=500)
+
+        messages.success(request, "Card Duel started!")
+        return redirect("game:game_board", game_id=game.id)
+
+    
+    elif game.mode in (Game.Mode.SURVIVAL, Game.Mode.DRAFT):
         create_default_board_for_game(game, enabled_tiles=game.enabled_tiles)
     else:
         game.generate_random_board()
 
-    # 3) Start based on mode (Draft stays DRAFTING; others become ACTIVE)
+    # 2 Start based on mode (Draft stays DRAFTING; others become ACTIVE)
     if game.mode == Game.Mode.DRAFT:
         # Draft start: give choices, reset picks, reset positions
         game.status = Game.Status.DRAFTING
@@ -716,6 +808,10 @@ def game_start(request, game_id: int):
 @require_POST
 @transaction.atomic
 def game_delete(request, game_id: int):
+    """
+    Permanently deletes a game instance and all associated data.
+    Only the host allowed.
+    """
     game = get_object_or_404(Game, id=game_id)
 
     if game.host != request.user:
@@ -732,6 +828,10 @@ def game_delete(request, game_id: int):
 @require_POST
 @transaction.atomic
 def game_end(request, game_id: int):
+    """
+    Manually forces the game to FINISHED status.
+    Only the host allowed.
+    """
     game = get_object_or_404(Game, id=game_id)
 
     if game.host != request.user:
@@ -748,6 +848,10 @@ def game_end(request, game_id: int):
 @login_required
 @require_GET
 def game_state(request, game_id: int):
+    """
+    Returns the current game state as JSON for the frontend polling/updates.
+    Includes player positions, stats, board state, and mode-specific data (e.g. Draft/Duel).
+    """
     game = get_object_or_404(Game, id=game_id)
 
     players = game.players.select_related("user")
@@ -757,8 +861,103 @@ def game_state(request, game_id: int):
     if not (is_player or is_host):
         return JsonResponse({"detail": "Forbidden"}, status=403)
 
+    MAX_PICKS = 5
     state = game.to_public_state(for_user=request.user)
     state = enrich_draft_options(state)
+
+    if game.mode == Game.Mode.CARD_DUEL:
+        cd_payload = _cd_build_state_for_user(game, request.user)
+        state["card_duel"] = cd_payload
+        state["card_duel_pick"] = cd_payload.get("pick", {"active": False})
+        
+        me = game.players.select_related("user").filter(user=request.user).first()
+        opp = game.players.exclude(user=request.user).first()
+
+        if me:
+            # Auto-heal: if picks are pending but options are empty, re-deal options
+            if (me.cd_picks_done or 0) < MAX_PICKS and not (me.cd_pick_options or []):
+                
+                # 1. Check if deck is empty
+                if not (me.cd_deck or []):
+                    # 2. Try to get codes from DB
+                    deck_codes = card_duel.build_deck_codes()
+                    
+                    # 3. IF DB IS EMPTY, SEED IT NOW
+                    if not deck_codes:
+                        seed_card_duel_cards() 
+                        deck_codes = card_duel.build_deck_codes()
+
+                    # 4. Rebuild player deck
+                    if deck_codes:
+                        import random
+                        me.cd_deck = list(deck_codes)
+                        random.shuffle(me.cd_deck)
+
+                # 5. Deal options from the (now hopefully populated) deck
+                if me.cd_deck:
+                    me.cd_pick_options = card_duel.deal_cd_pick_options(me, k=3)
+                    me.save(update_fields=["cd_pick_options", "cd_deck"])
+
+            # Build pick payload
+            if me.cd_picks_done < MAX_PICKS:
+                codes = list(me.cd_pick_options or [])
+                types = {t.code: t for t in CardDuelCardType.objects.filter(code__in=codes)}
+
+                options_payload = []
+                for c in codes:
+                    t = types.get(c)
+                    title = (t.name if t else c)
+                    img = _cd_image_filename(title)
+                    options_payload.append({
+                        "code": c,
+                        "title": title,
+                        "image_url": static(f"images/CardDuelCards/{img}"),
+                    })
+
+                pick_payload = {
+                    "active": True,
+                    "picks_done": int(me.cd_picks_done or 0),
+                    "max_picks": MAX_PICKS,
+                    "options": options_payload,
+                }
+            else:
+                pick_payload = {"active": False, "picks_done": int(me.cd_picks_done or 0), "max_picks": MAX_PICKS, "options": []}
+
+
+            # Hand as enriched objects
+            my_hand_codes = list(me.cd_hand or [])
+            my_hand = [_cd_card_payload_from_code(c) for c in my_hand_codes]
+
+            # Put pick in ONE consistent location: card_duel.pick
+            # game/views.py  (inside Mode.CARD_DUEL: where you set state["card_duel"] = {...})
+
+            state["card_duel"] = {
+                "pick": pick_payload,  # ✅ ADD THIS LINE
+                "you": {
+                    "player_id": me.id,
+                    "hp": int(me.hp or 0),
+                    "shield": int(me.shield_points or 0),
+                    "deck_count": _safe_len(me.cd_deck),
+                    "discard_count": _safe_len(me.cd_discard),
+                    "hand": my_hand,
+                },
+                "opponent": {
+                    "player_id": getattr(opp, "id", None),
+                    "hp": int(getattr(opp, "hp", 0) or 0) if opp else None,
+                    "shield": int(getattr(opp, "shield_points", 0) or 0) if opp else None,
+                    "deck_count": _safe_len(getattr(opp, "cd_deck", None)) if opp else None,
+                    "discard_count": _safe_len(getattr(opp, "cd_discard", None)) if opp else None,
+                    "hand_count": _safe_len(getattr(opp, "cd_hand", None)) if opp else None,
+                },
+                "current_turn_player_id": getattr(game, "current_player_id", None),
+            }
+
+
+            # keep backward-compat if frontend still reads this:
+            state["card_duel_pick"] = pick_payload
+        else:
+            state["card_duel_pick"] = {"active": False}
+
     return JsonResponse(state)
 
 
@@ -766,6 +965,10 @@ def game_state(request, game_id: int):
 @require_POST
 @transaction.atomic
 def game_roll(request, game_id: int):
+    """
+    Executes a dice roll for the current player.
+    Validates turn order and strictly blocking states (Pending Question/Shop/Duel).
+    """
     game = get_object_or_404(Game, id=game_id)
 
     if game.status != Game.Status.ACTIVE:
@@ -829,6 +1032,8 @@ def game_roll(request, game_id: int):
             {"detail": "It is not your turn.", "game_state": game.to_public_state(for_user=request.user)},
             status=403
         )
+    if game.mode == Game.Mode.CARD_DUEL:
+        return JsonResponse({"detail": "Dice is disabled in Card Duel."}, status=400)
 
     action_result = game.roll_and_apply_for(player)
     state = game.to_public_state(for_user=request.user)
@@ -843,6 +1048,10 @@ def game_roll(request, game_id: int):
 @require_POST
 @transaction.atomic
 def game_order_roll(request, game_id: int):
+    """
+    Handles dice rolls for determining initial turn order.
+    Resolves ties by triggering rerolls for tied players.
+    """
     # Lock row to avoid double-roll race conditions
     game = Game.objects.select_for_update().get(id=game_id)
 
@@ -941,6 +1150,10 @@ def game_order_roll(request, game_id: int):
 @require_POST
 @transaction.atomic
 def answer_question(request, game_id: int):
+    """
+    Submits an answer for the pending question.
+    Awards coins for correct answers or deals damage for wrong ones, then advances turn.
+    """
     game = get_object_or_404(Game, id=game_id)
 
     if game.status != Game.Status.ACTIVE:
@@ -1007,6 +1220,10 @@ def answer_question(request, game_id: int):
 @require_POST
 @transaction.atomic
 def shop_buy(request, game_id: int):
+    """
+    Purchases a Support Card from the shop.
+    Deducts coins and adds the card to the player's inventory.
+    """
     game = get_object_or_404(Game, id=game_id)
     if game.status != Game.Status.ACTIVE:
         return JsonResponse({"detail": "Game is not active."}, status=400)
@@ -1051,6 +1268,9 @@ def shop_buy(request, game_id: int):
 @require_POST
 @transaction.atomic
 def shop_sell(request, game_id: int):
+    """
+    Sells a Support Card back to the shop for half its value.
+    """
     game = get_object_or_404(Game, id=game_id)
     if game.status != Game.Status.ACTIVE:
         return JsonResponse({"detail": "Game is not active."}, status=400)
@@ -1092,6 +1312,9 @@ def shop_sell(request, game_id: int):
 @require_POST
 @transaction.atomic
 def shop_close(request, game_id: int):
+    """
+    Closes the shop and advances the turn.
+    """
     game = get_object_or_404(Game, id=game_id)
     if game.status != Game.Status.ACTIVE:
         return JsonResponse({"detail": "Game is not active."}, status=400)
@@ -1116,6 +1339,10 @@ def shop_close(request, game_id: int):
 @require_POST
 @transaction.atomic
 def gun_attack(request, game_id: int):
+    """
+    Executes a Gun tile attack against a chosen target player.
+    Deals damage and advances turn.
+    """
     game = get_object_or_404(Game, id=game_id)
     if game.status != Game.Status.ACTIVE:
         return JsonResponse({"detail": "Game is not active."}, status=400)
@@ -1162,6 +1389,10 @@ def gun_attack(request, game_id: int):
 @require_POST
 @transaction.atomic
 def gun_skip(request, game_id: int):
+    """
+    Skips the Gun tile action (no shot fired).
+    Advances turn.
+    """
     game = get_object_or_404(Game, id=game_id)
     if game.status != Game.Status.ACTIVE:
         return JsonResponse({"detail": "Game is not active."}, status=400)
@@ -1189,8 +1420,12 @@ def gun_skip(request, game_id: int):
 
 @login_required
 def game_board(request, game_id: int):
+    """
+    Renders the game board UI.
+    Dispatches to 'card_duel.html' if mode is Card Duel, otherwise 'game_board.html'.
+    """
     game = get_object_or_404(Game, id=game_id)
-
+    
     players_qs = game.players.select_related("user")
     is_player = players_qs.filter(user=request.user).exists()
     is_host = (game.host == request.user)
@@ -1217,12 +1452,19 @@ def game_board(request, game_id: int):
         "players": players_ordered,
         "tiles": tiles_qs,
     }
-    return render(request, "game_board.html", context)
+    template = "game_board.html"
+    if game.mode == Game.Mode.CARD_DUEL:
+        template = "card_duel.html"
 
+    return render(request, template, context)
 
 @login_required
 @require_POST
 def use_card(request, game_id):
+    """
+    Activates a Support Card (Finish Line / Survival modes).
+    Applies effect immediately and marks card as used.
+    """
     try:
         body = json.loads(request.body.decode("utf-8") or "{}")
     except Exception:
@@ -1317,7 +1559,951 @@ def use_card(request, game_id):
 
     return JsonResponse({"game_state": game.to_public_state(for_user=request.user)})
 
+NEGATIVE_STATUS_TYPES = {"poison", "burn", "weaken", "vulnerable", "silence"}
+
+def _cd_status_has(player: PlayerInGame, status_type: str) -> bool:
+    """Checks if player has a specific active status (turns > 0)."""
+    for s in (player.cd_status or []):
+        if isinstance(s, dict) and s.get("type") == status_type and int(s.get("turns_left") or 0) > 0:
+            return True
+    return False
+
+def _cd_add_status(player: PlayerInGame, status_dict: dict) -> None:
+    """
+    Adds/merges a status entry to player's cd_status.
+    Merging strategy: if same type exists, increase stacks and refresh turns_left to max(existing, new).
+    """
+    if not isinstance(status_dict, dict):
+        return
+
+    stype = status_dict.get("type")
+    if not stype:
+        return
+
+    turns = int(status_dict.get("turns") or status_dict.get("turns_left") or 0)
+    stacks = int(status_dict.get("stacks") or 1)
+
+    cur = list(player.cd_status or [])
+    for s in cur:
+        if isinstance(s, dict) and s.get("type") == stype:
+            s["stacks"] = int(s.get("stacks") or 1) + stacks
+            s["turns_left"] = max(int(s.get("turns_left") or 0), turns)
+            # copy other keys if missing
+            for k, v in status_dict.items():
+                if k not in s:
+                    s[k] = v
+            player.cd_status = cur
+            return
+
+    # new entry
+    entry = dict(status_dict)
+    entry["stacks"] = stacks
+    entry["turns_left"] = turns
+    player.cd_status = cur + [entry]
+
+def _cd_cleanse(player: PlayerInGame, remove_count: int = 1, allowed_types=None) -> int:
+    """
+    Removes up to remove_count statuses from cd_status (negative by default).
+    Returns how many were removed.
+    """
+    allowed = set(allowed_types) if allowed_types else NEGATIVE_STATUS_TYPES
+    cur = list(player.cd_status or [])
+    kept = []
+    removed = 0
+    for s in cur:
+        if removed < remove_count and isinstance(s, dict) and s.get("type") in allowed:
+            removed += 1
+            continue
+        kept.append(s)
+    player.cd_status = kept
+    return removed
+
+def _cd_draw(player: PlayerInGame, n: int) -> int:
+    """Draws n cards from the player's personal deck to hand."""
+    n = max(0, int(n or 0))
+    deck = list(player.cd_deck or [])
+    hand = list(player.cd_hand or [])
+    drawn = deck[:n]
+    player.cd_hand = hand + drawn
+    player.cd_deck = deck[n:]
+    return len(drawn)
+
+def _cd_last_played_payload(player: PlayerInGame):
+    """Returns {code,title,image_url} for the player's last played card, or None."""
+    flags = dict(getattr(player, "cd_turn_flags", None) or {})
+    code = flags.get("last_played")
+    if not code:
+        return None
+    try:
+        return _cd_card_payload_from_code(str(code))
+    except Exception:
+        # Never break state if mapping fails
+        return {"code": str(code), "title": str(code), "image_url": static("images/CardDuelCards/Strike.png")}
+
+
+def _cd_build_state_for_user(game: Game, user) -> dict:
+    """Builds a consistent Card Duel payload for /state/ and action endpoints."""
+    MAX_PICKS = 5
+    me = game.players.select_related("user").filter(user=user).first()
+    opp = game.players.exclude(user=user).first()
+
+    if not me:
+        return {"pick": {"active": False}, "you": {}, "opponent": {}, "current_turn_player_id": getattr(game, "current_player_id", None)}
+
+    # pick payload
+    if me.cd_picks_done < MAX_PICKS:
+        codes = list(me.cd_pick_options or [])
+        types = {t.code: t for t in CardDuelCardType.objects.filter(code__in=codes)}
+
+        options_payload = []
+        for c in codes:
+            t = types.get(c)
+            title = (t.name if t else c)
+            img = _cd_image_filename(title)
+            options_payload.append({
+                "code": c,
+                "title": title,
+                "image_url": static(f"images/CardDuelCards/{img}"),
+            })
+
+        pick_payload = {
+            "active": True,
+            "picks_done": int(me.cd_picks_done or 0),
+            "max_picks": MAX_PICKS,
+            "options": options_payload,
+        }
+    else:
+        pick_payload = {"active": False, "picks_done": int(me.cd_picks_done or 0), "max_picks": MAX_PICKS, "options": []}
+
+    my_hand_codes = list(me.cd_hand or [])
+    my_hand = [_cd_card_payload_from_code(c) for c in my_hand_codes]
+
+    return {
+        "pick": pick_payload,
+        "you": {
+            "player_id": me.id,
+            "hp": int(me.hp or 0),
+            "shield": int(me.shield_points or 0),
+            "deck_count": _safe_len(me.cd_deck),
+            "discard_count": _safe_len(me.cd_discard),
+            "hand": my_hand,
+            "last_played": _cd_last_played_payload(me),
+            "statuses": list(me.cd_status or []),
+            "turn_flags": dict(me.cd_turn_flags or {}),
+        },
+        "opponent": {
+            "player_id": getattr(opp, "id", None),
+            "hp": int(getattr(opp, "hp", 0) or 0) if opp else None,
+            "shield": int(getattr(opp, "shield_points", 0) or 0) if opp else None,
+            "deck_count": _safe_len(getattr(opp, "cd_deck", None)) if opp else None,
+            "discard_count": _safe_len(getattr(opp, "cd_discard", None)) if opp else None,
+            "hand_count": _safe_len(getattr(opp, "cd_hand", None)) if opp else None,
+            "last_played": _cd_last_played_payload(opp) if opp else None,
+            "statuses": list(getattr(opp, "cd_status", None) or []) if opp else [],
+            "turn_flags": dict(getattr(opp, "cd_turn_flags", None) or {}) if opp else {},
+        },
+        "turn_flags": dict(me.cd_turn_flags or {}),
+        "current_turn_player_id": getattr(game, "current_player_id", None),
+    }
+
+def _cd_apply_damage(game: Game, target: PlayerInGame, amount: int, *, ignore_shield: int = 0) -> dict:
+    """
+    Applies damage using shield_points first (with optional shield ignore for this hit).
+    Returns dict with damage breakdown.
+    """
+    amount = max(0, int(amount or 0))
+    ignore_shield = max(0, int(ignore_shield or 0))
+
+    shield_before = int(getattr(target, "shield_points", 0) or 0)
+    shield_effective = max(0, shield_before - ignore_shield)
+
+    # damage hits shield_effective first
+    dmg_to_shield = min(shield_effective, amount)
+    remaining = amount - dmg_to_shield
+
+    # new shield = original shield minus dmg_to_shield (ignore_shield doesn't delete shield, it just bypasses)
+    target.shield_points = max(0, shield_before - dmg_to_shield)
+
+    hp_before = int(getattr(target, "hp", 0) or 0)
+    if remaining > 0:
+        target.hp = max(0, hp_before - remaining)
+
+    # alive state
+    if target.hp <= 0:
+        target.hp = 0
+        target.is_alive = False
+
+    target.save(update_fields=["shield_points", "hp", "is_alive"])
+
+    return {
+        "amount": amount,
+        "ignore_shield": ignore_shield,
+        "shield_before": shield_before,
+        "shield_after": target.shield_points,
+        "hp_before": hp_before,
+        "hp_after": target.hp,
+    }
+
+
+def _cd_finish_if_dead(game: Game) -> None:
+    """
+    If only one player alive (or someone hit 0), finish game.
+    """
+    alive = list(game.players.filter(is_alive=True))
+    if len(alive) <= 1:
+        game.status = Game.Status.FINISHED
+        game.save(update_fields=["status"])
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def card_duel_play_card(request, game_id: int):
+    """
+    Handles playing a card in Card Duel mode.
+    Validates turn, resource availability, status effects (Silence/Stun), and executes the card's effect.
+    """
+    game = get_object_or_404(Game, id=game_id)
+
+    if game.mode != Game.Mode.CARD_DUEL:
+        return JsonResponse({"detail": "Not a Card Duel game."}, status=400)
+
+    if game.status != Game.Status.ACTIVE:
+        return JsonResponse({"detail": "Game is not active."}, status=400)
+
+    me = game.players.select_related("user").filter(user=request.user).first()
+
+    if me.cd_picks_done < 5:
+        return JsonResponse({"detail": "Finish selecting your starting cards first."}, status=400)
+
+    if not me:
+        return JsonResponse({"detail": "You are not a player in this game."}, status=403)
+
+    if not me.is_alive:
+        return JsonResponse({"detail": "You are eliminated."}, status=400)
+
+    # Turn check
+    current = game.current_player
+    if not current or current.id != me.id:
+        return JsonResponse({"detail": "It is not your turn.", "game_state": game.to_public_state(for_user=request.user)}, status=403)
+
+    # Parse payload: {"card_code": "..."} OR {"card_id": 123}
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        body = {}
+
+    card_code = body.get("card_code")
+    card_id = body.get("card_id")
+
+    card_type = None
+    if card_code:
+        card_type = CardDuelCardType.objects.filter(code=str(card_code), is_active=True).first()
+    elif card_id is not None:
+        try:
+            card_type = CardDuelCardType.objects.filter(id=int(card_id), is_active=True).first()
+        except Exception:
+            card_type = None
+
+    if not card_type:
+        return JsonResponse({"detail": "Card not found."}, status=404)
+
+    # Must have it in hand (we store codes by default)
+    hand = list(me.cd_hand or [])
+    if card_type.code not in hand:
+        return JsonResponse({"detail": "That card is not in your hand."}, status=400)
+
+    # Enforce turn limits & Status Blocks
+    flags = dict(me.cd_turn_flags or {})
+    action_used = bool(flags.get("action_used", False))
+    bonus_used = bool(flags.get("bonus_used", False))
+
+    is_bonus = (card_type.category == CardDuelCardType.Category.BONUS)
+
+    # 1) Check Silence (blocks ALL cards)
+    if _cd_status_has(me, "silence"):
+        return JsonResponse({"detail": "You are silenced and cannot play cards this turn."}, status=400)
+
+    # 2) Check Stun (blocks ACTION cards only)
+    if not is_bonus and _cd_status_has(me, "stun"):
+        return JsonResponse({"detail": "You are stunned and cannot play Action cards (Bonus cards allowed)."}, status=400)
+
+    if is_bonus:
+        if bonus_used:
+            return JsonResponse({"detail": "Bonus card already used this turn."}, status=400)
+    else:
+        if action_used:
+            return JsonResponse({"detail": "Action card already used this turn."}, status=400)
+
+    # Opponent (2-player assumption)
+    opp = game.players.filter(is_alive=True).exclude(id=me.id).first()
+    if not opp:
+        # no opponent alive -> finish
+        _cd_finish_if_dead(game)
+        return JsonResponse({"detail": "No opponent available.", "game_state": game.to_public_state(for_user=request.user)}, status=400)
+
+    # Move card from hand -> discard
+    hand.remove(card_type.code)
+    me.cd_hand = hand
+    me.cd_discard = list(me.cd_discard or []) + [card_type.code]
+
+    # Resolve effect
+    result = {"played": card_type.code, "effect_type": card_type.effect_type, "details": {}}
+    params = dict(card_type.params or {})
+
+    # Pre-modifiers from statuses (minimal implementation)
+    # - vulnerable: target takes +damage_taken_up per stack
+    # - weaken: attacker damage reduced on next attack
+    damage_bonus = 0
+    if card_type.effect_type == CardDuelCardType.EffectType.DAMAGE:
+        # apply vulnerable on opponent
+        for s in (opp.cd_status or []):
+            if isinstance(s, dict) and s.get("type") == "vulnerable" and int(s.get("turns_left") or 0) > 0:
+                damage_bonus += int(s.get("damage_taken_up") or 0) * int(s.get("stacks") or 1)
+
+        # apply weaken on me (consumed once)
+        weaken_down = 0
+        damage_bonus_status = 0
+        new_status = []
+        for s in (me.cd_status or []):
+            stype = s.get("type")
+            stacks = int(s.get("stacks") or 1)
+            turns = int(s.get("turns_left") or 0)
+            
+            if turns > 0:
+                if stype == "weaken":
+                    weaken_down = max(weaken_down, int(s.get("damage_down_next") or 0) * stacks)
+                    # consume weaken immediately
+                    continue
+                if stype == "battle_focus":
+                    damage_bonus_status += int(s.get("damage_bonus") or 0) * stacks
+            
+            new_status.append(s)
+            
+        if weaken_down:
+            me.cd_status = new_status
+            me.save(update_fields=["cd_status"])
+
+        result["details"]["weaken_down"] = weaken_down
+        result["details"]["vulnerable_bonus"] = damage_bonus
+        result["details"]["battle_focus_bonus"] = damage_bonus_status
+
+    # Execute by effect_type
+    et = card_type.effect_type
+
+    if et == CardDuelCardType.EffectType.HEAL:
+        amt = int(params.get("amount") or 0)
+        
+        # Check Amplify
+        amplify_bonus = 0
+        new_status = []
+        for s in (me.cd_status or []):
+            stype = s.get("type")
+            if stype == "amplify_heal" and int(s.get("turns_left") or 0) > 0:
+                amplify_bonus += int(s.get("heal_bonus") or 0)
+                # consume? usually yes for "next heal"
+                if s.get("consume_on_heal"):
+                    continue
+            new_status.append(s)
+            
+        if amplify_bonus > 0:
+            me.cd_status = new_status
+            me.save(update_fields=["cd_status"])
+            
+        total_heal = amt + amplify_bonus
+        me.hp = max(0, int(me.hp or 0) + total_heal)
+        me.save(update_fields=["hp"])
+        result["details"] = {"healed": total_heal, "base": amt, "amplify": amplify_bonus, "hp_after": me.hp}
+
+    elif et == CardDuelCardType.EffectType.SHIELD:
+        amt = int(params.get("amount") or 0)
+        me.shield_points = int(getattr(me, "shield_points", 0) or 0) + amt
+        me.save(update_fields=["shield_points"])
+        result["details"] = {"shield_gained": amt, "shield_after": me.shield_points}
+
+    elif et == CardDuelCardType.EffectType.DRAW:
+        amt = int(params.get("amount") or 0)
+        drew = _cd_draw(me, amt)
+
+        # track draws this turn (optional, but useful for debugging/rules)
+        flags["draws_this_turn"] = int(flags.get("draws_this_turn") or 0) + int(drew)
+
+        result["details"] = {"draw_requested": amt, "drawn": drew, "hand_count": len(me.cd_hand or [])}
+
+        apply_status = params.get("apply_status")
+        if isinstance(apply_status, dict):
+            _cd_add_status(me, apply_status)
+            me.save(update_fields=["cd_status"])
+            result["details"]["applied_status"] = apply_status
+
+
+    elif et == CardDuelCardType.EffectType.APPLY_STATUS:
+        # default target: opponent unless params says self
+        st = params.get("status") or {}
+        target = params.get("target") or "opponent"
+        if target == "self":
+            _cd_add_status(me, st)
+            me.save(update_fields=["cd_status"])
+            result["details"] = {"target": "self", "status": st}
+        else:
+            _cd_add_status(opp, st)
+            opp.save(update_fields=["cd_status"])
+            result["details"] = {"target": "opponent", "status": st}
+
+    elif et == CardDuelCardType.EffectType.CLEANSE:
+        target = params.get("target") or "self"
+        remove_count = int(params.get("remove_count") or 1)
+        types = params.get("types") or None
+        if target == "opponent":
+            removed = _cd_cleanse(opp, remove_count=remove_count, allowed_types=types)
+            opp.save(update_fields=["cd_status"])
+            result["details"] = {"target": "opponent", "removed": removed}
+        else:
+            removed = _cd_cleanse(me, remove_count=remove_count, allowed_types=types)
+            me.save(update_fields=["cd_status"])
+            result["details"] = {"target": "self", "removed": removed}
+
+    elif et == CardDuelCardType.EffectType.GAMBLE:
+        win_chance = float(params.get("win_chance", 0.5))
+        import random
+        is_win = random.random() < win_chance
+        
+        outcome_def = params.get("win") if is_win else params.get("loss")
+        outcome_type = outcome_def.get("type", "")
+        outcome_val = int(outcome_def.get("amount", 0))
+        
+        detail_msg = ""
+        if outcome_type == "shield":
+            my_shield = int(getattr(me, "shield_points", 0) or 0)
+            me.shield_points = my_shield + outcome_val
+            me.save(update_fields=["shield_points"])
+            detail_msg = f"Won gamble: Gained {outcome_val} shield"
+        elif outcome_type == "damage_self":
+            # Direct damage to self
+            dmg_info = _cd_apply_damage(game, me, outcome_val, ignore_shield=0) # Self damage usually hits shield or not? Assume hits shield.
+            detail_msg = f"Lost gamble: Took {outcome_val} damage"
+        else:
+            detail_msg = f"Gamble result: {outcome_type} {outcome_val} (Not implemented)"
+            
+        result["details"] = {"gamble_win": is_win, "message": detail_msg}
+
+    elif et == CardDuelCardType.EffectType.ANTIDOTE:
+        # Cleanse specific types + Heal
+        target_types = params.get("types", []) # ["poison", "burn"]
+        heal_amt = int(params.get("heal", 0))
+        
+        cleaned_count = _cd_cleanse(me, remove_count=99, allowed_types=target_types)
+        
+        if heal_amt > 0:
+            me.hp = max(0, int(me.hp or 0) + heal_amt)
+            me.save(update_fields=["hp", "cd_status"]) # cleansed status + hp
+            result["details"] = {"cleansed": cleaned_count, "healed": heal_amt}
+        else:
+            me.save(update_fields=["cd_status"])
+            result["details"] = {"cleansed": cleaned_count}
+
+        amt = int(params.get("amount") or 0)
+        before = int(getattr(opp, "shield_points", 0) or 0)
+        opp.shield_points = max(0, before - amt)
+        opp.save(update_fields=["shield_points"])
+        result["details"] = {"removed": min(before, amt), "shield_after": opp.shield_points}
+
+    elif et == CardDuelCardType.EffectType.SWAP_SHIELD:
+        my_shield = int(getattr(me, "shield_points", 0) or 0)
+        op_shield = int(getattr(opp, "shield_points", 0) or 0)
+        me.shield_points = op_shield
+        opp.shield_points = my_shield
+        me.save(update_fields=["shield_points"])
+        opp.save(update_fields=["shield_points"])
+        result["details"] = {"swapped": True, "my_shield": me.shield_points, "op_shield": opp.shield_points}
+
+    elif et == CardDuelCardType.EffectType.HEAL_AND_SHIELD:
+        heal_amt = int(params.get("heal", 2) or 2)
+        shield_amt = int(params.get("shield", 2) or 2)
+        me.hp = max(0, int(me.hp or 0) + heal_amt)
+        me.shield_points = int(getattr(me, "shield_points", 0) or 0) + shield_amt
+        me.save(update_fields=["hp", "shield_points"])
+        result["details"] = {"healed": heal_amt, "shield_gained": shield_amt}
+
+    elif et == CardDuelCardType.EffectType.DISCARD_AND_DRAW:
+        # "Change (replace) up to 2 cards" -> Implementation: Discard 2 random cards (if have them), Draw 2.
+        # Since we played the cycle card already, hand has N cards.
+        # We discard min(N, amount) random cards, then draw that many.
+        amount = int(params.get("amount", 2) or 2)
+        
+        current_hand = list(me.cd_hand or [])
+        to_discard_count = min(len(current_hand), amount)
+        
+        discarded_codes = []
+        if to_discard_count > 0:
+            import random
+            random.shuffle(current_hand)
+            discarded_codes = current_hand[:to_discard_count]
+            kept = current_hand[to_discard_count:]
+            me.cd_hand = kept
+            me.cd_discard = list(me.cd_discard or []) + discarded_codes
+        
+        drawn = _cd_draw(me, to_discard_count) # Draw back same number
+        
+        # Save happens at end of function usually, but _cd_draw saves hand/deck? 
+        # _cd_draw modifies object but doesn't save.
+        
+        result["details"] = {
+            "discarded_count": to_discard_count, 
+            "drawn_count": drawn,
+            "discarded": discarded_codes # optional info
+        }
+
+    elif et == CardDuelCardType.EffectType.DAMAGE:
+        amt = int(params.get("amount") or 0)
+        ignore_shield = int(params.get("ignore_shield") or 0)
+
+        # add vulnerable bonus
+        # subtract weaken penalty (flat)
+        # subtract weaken_curse penalty (percent)
+        weaken_down = int(result["details"].get("weaken_down") or 0)
+        
+        # Check for Weaken Curse (percent reduction)
+        weaken_percent = 0
+        new_status = []
+        for s in (me.cd_status or []):
+            if isinstance(s, dict) and s.get("type") == "weaken_curse" and int(s.get("turns_left") or 0) > 0:
+                weaken_percent = max(weaken_percent, int(s.get("damage_percent") or 0)) 
+                # consume? typically "next attack". Yes.
+                continue
+            new_status.append(s)
+        
+        if weaken_percent > 0:
+            me.cd_status = new_status
+            me.save(update_fields=["cd_status"])
+        
+        # 1. Base + Vulnerable + Battle Focus
+        dmg_calc = amt + int(damage_bonus) + int(result["details"].get("battle_focus_bonus") or 0)
+        
+        # 2. Apply Percent Reduction
+        if weaken_percent > 0:
+            # "deals 50% less damage" -> damage * (1 - 0.5)
+            # rounded down? user said "(damage is reduced by half)"
+            # integer division
+            reduction = (dmg_calc * weaken_percent) // 100
+            dmg_calc -= reduction
+            result["details"]["weaken_curse_reduction"] = reduction
+            
+        # 3. Apply Flat Reduction (Weaken)
+        dmg_calc -= weaken_down
+        
+        final_amt = max(0, dmg_calc)
+
+        # Check Counter Stance (Reflect) on Opponent
+        reflected_amt = 0
+        new_opp_status = []
+        opp_status_changed = False
+        
+        for s in (opp.cd_status or []):
+            if isinstance(s, dict) and s.get("type") == "counter_stance" and int(s.get("turns_left") or 0) > 0:
+                # Found counter stance
+                r_val = int(s.get("reflect_amount") or 0)
+                reflected_amt += r_val
+                
+                # Consume if consume_on_hit is True (default yes for this card)
+                if s.get("consume_on_hit"):
+                    opp_status_changed = True
+                    continue # remove from list
+            new_opp_status.append(s)
+            
+        if opp_status_changed:
+            opp.cd_status = new_opp_status
+            opp.save(update_fields=["cd_status"])
+            
+        if reflected_amt > 0:
+            # Deal damage back to ME (Attacker)
+            # Should this reflect PREVENT damage to opponent? 
+            # "Reflect 3 damage". Usually implies PARRY + RETURN.
+            # I will reduce final_amt by reflected_amt (to min 0)
+            # And deal reflected_amt to ME.
+            
+            # Reduce incoming
+            # final_amt = max(0, final_amt - reflected_amt) # Optional: User didn't say prevent, but "Reflect" implies it.
+            # Only doing Damage to Attacker per "Reflect 3 damage once" description which focuses on the damage dealt back.
+            # But "Reflect" strongly implies prevention. I will NOT prevent for now to be safe (unless requested), 
+            # actually "Reflect" usually prevents. let's Prevent.
+            # Wait, "Counter Stance" description: "Reflect 3 damage once".
+            # If I hit for 5, Reflect 3. Opponent takes 2? I take 3? Yes, this seems fair.
+            
+            # Reflect only up to incoming damage? Or flat 3? "Reflect 3 damage".
+            # Any damage triggers 3 reflection.
+            # I'll effectively prevent 3 and deal 3 back.
+            prevented = min(final_amt, reflected_amt) # Prevent up to reflect amount
+            # final_amt -= prevented 
+            # Actually, "Reflect 3" might mean "Deal 3 back", not "Block 3".
+            # "Counter" usually means "Retaliate". 
+            # I will just Deal 3 back and NOT prevent, to avoid nerfing damage too much unless specified.
+            # Re-read: "Reflect 3 damage once (the next time you take damage)."
+            # Implementation: Deal 3 to Me. Status removed.
+            
+            _cd_apply_damage(game, me, reflected_amt, ignore_shield=0)
+            result["details"]["reflected_damage"] = reflected_amt
+            result["details"]["message"] = f"Opponent Counter Stance triggered! You took {reflected_amt} damage."
+        
+        dmg_info = _cd_apply_damage(game, opp, final_amt, ignore_shield=ignore_shield)
+        result["details"].update({"base": amt, "final": final_amt, **dmg_info})
+
+        # embedded status (venom strike, flame jab, etc.)
+        apply_status = params.get("apply_status")
+        if isinstance(apply_status, dict):
+            _cd_add_status(opp, apply_status)
+            opp.save(update_fields=["cd_status"])
+            result["details"]["applied_status"] = apply_status
+
+    else:
+        return JsonResponse({"detail": f"Unsupported Card Duel effect: {et}"}, status=400)
+
+    
+
+    # Mark turn flag
+    if is_bonus:
+        flags["bonus_used"] = True
+    else: 
+        flags["action_used"] = True
+    flags["last_played"] = card_type.code
+    me.cd_turn_flags = flags
+
+    me.save(update_fields=["cd_hand", "cd_deck", "cd_discard", "cd_turn_flags", "cd_status"])
+
+    # End game if someone died
+    _cd_finish_if_dead(game)
+
+    state = game.to_public_state(for_user=request.user)
+    state = enrich_draft_options(state)
+    if game.mode == Game.Mode.CARD_DUEL:
+        # include duel payload for this user (same structure you added earlier)
+        state["card_duel"] = {
+            "hand": list(me.cd_hand or []),
+            "deck_count": len(me.cd_deck or []),
+            "discard_count": len(me.cd_discard or []),
+            "status": list(me.cd_status or []),
+            "turn_flags": dict(me.cd_turn_flags or {}),
+        }
+    
+    state["card_duel"] = _cd_build_state_for_user(game, request.user)
+    state["card_duel_pick"] = state["card_duel"].get("pick", {"active": False})
+
+    return JsonResponse({"ok": True, "result": result, "game_state": state})
+
+def _cd_tick_statuses_start_of_turn(player: PlayerInGame) -> dict:
+    """
+    Applies start-of-turn effects and decreases turns_left.
+    Supported:
+      - poison: tick_damage
+      - burn: tick_damage
+      - regen: tick_heal
+      - focus: extra_draw (handled by returning draw_bonus)
+      - bless/vulnerable/silence/weaken: only duration decrement here
+    Returns: {"damage_taken": X, "healed": Y, "draw_bonus": Z, "expired": [types...]}
+    """
+    cur = list(player.cd_status or [])
+    new_list = []
+    dmg = 0
+    heal = 0
+    draw_bonus = 0
+    expired = []
+
+    for s in cur:
+        if not isinstance(s, dict):
+            continue
+
+        turns_left = int(s.get("turns_left") or s.get("turns") or 0)
+        if turns_left <= 0:
+            continue
+
+        stype = s.get("type")
+        stacks = int(s.get("stacks") or 1)
+
+        # Apply tick effects at start of turn
+        if stype == "poison":
+            dmg += int(s.get("tick_damage") or 1) * stacks
+        elif stype == "burn":
+            dmg += int(s.get("tick_damage") or 2) * stacks
+        elif stype == "regen":
+            heal += int(s.get("tick_heal") or 1) * stacks
+        elif stype == "focus":
+            draw_bonus += int(s.get("extra_draw") or 1) * stacks
+
+        # decrement duration
+        turns_left -= 1
+        s["turns_left"] = turns_left
+
+        if turns_left > 0:
+            new_list.append(s)
+        else:
+            if stype:
+                expired.append(stype)
+
+    player.cd_status = new_list
+    return {"damage_taken": dmg, "healed": heal, "draw_bonus": draw_bonus, "expired": expired}
+
+
+def _cd_apply_bless_damage_reduction(defender: PlayerInGame, incoming: int) -> int:
+    """
+    Bless reduces incoming damage by N per stack (damage_reduce).
+    """
+    incoming = max(0, int(incoming or 0))
+    reduce_total = 0
+    for s in (defender.cd_status or []):
+        if isinstance(s, dict) and s.get("type") == "bless" and int(s.get("turns_left") or 0) > 0:
+            reduce_total += int(s.get("damage_reduce") or 0) * int(s.get("stacks") or 1)
+    return max(0, incoming - reduce_total)
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def card_duel_end_turn(request, game_id: int):
+    """
+    Ends the current player's turn in Card Duel.
+    Handles start-of-turn effects for the next player (ticks, damage/heal).
+    """
+    game = get_object_or_404(Game, id=game_id)
+
+    if game.mode != Game.Mode.CARD_DUEL:
+        return JsonResponse({"detail": "Not a Card Duel game."}, status=400)
+
+    if game.status != Game.Status.ACTIVE:
+        return JsonResponse({"detail": "Game is not active."}, status=400)
+
+    me = game.players.select_related("user").filter(user=request.user).first()
+    if me.cd_picks_done < 5:
+        return JsonResponse({"detail": "Finish selecting your starting cards first."}, status=400)
+
+    if not me:
+        return JsonResponse({"detail": "You are not a player in this game."}, status=403)
+
+    # Turn check
+    current = game.current_player
+    if not current or current.id != me.id:
+        return JsonResponse(
+            {"detail": "It is not your turn.", "game_state": game.to_public_state(for_user=request.user)},
+            status=403,
+        )
+
+    # Must have played at least one card? (optional rule)
+    # If you want to allow pass, remove this block.
+    flags = dict(me.cd_turn_flags or {})
+    if not flags.get("action_used") and not flags.get("bonus_used"):
+        # allow pass if you want -> comment out to force play
+        pass
+
+    # Advance turn index to next alive player (2-player but safe)
+    players_ordered = list(game.players.order_by("turn_order"))
+    if not players_ordered:
+        return JsonResponse({"detail": "No players."}, status=400)
+
+    # determine next alive index
+    n = len(players_ordered)
+    cur_idx = int(game.current_turn_index or 0) % n
+
+    next_idx = None
+    for step in range(1, n + 1):
+        cand = players_ordered[(cur_idx + step) % n]
+        if cand.is_alive:
+            next_idx = (cur_idx + step) % n
+            break
+
+    if next_idx is None:
+        # nobody alive -> finish
+        game.status = Game.Status.FINISHED
+        game.save(update_fields=["status"])
+        return JsonResponse({"ok": True, "game_state": game.to_public_state(for_user=request.user)})
+
+    # Set next turn
+    game.current_turn_index = next_idx
+    game.save(update_fields=["current_turn_index"])
+
+    # Start-of-turn processing for the next player
+    next_player = players_ordered[next_idx]
+    start_info = _cd_tick_statuses_start_of_turn(next_player)
+
+    # Apply tick heal
+    if start_info["healed"] > 0:
+        next_player.hp = max(0, int(next_player.hp or 0) + int(start_info["healed"]))
+
+    # Apply tick damage with Bless reduction
+    if start_info["damage_taken"] > 0:
+        reduced = _cd_apply_bless_damage_reduction(next_player, int(start_info["damage_taken"]))
+        if reduced > 0:
+            # shield-aware damage
+            _cd_apply_damage(game, next_player, reduced, ignore_shield=0)
+        start_info["damage_taken_final"] = reduced
+    else:
+        start_info["damage_taken_final"] = 0
+
+    # Draw 1 + focus bonus
+    draw_total = 1 + int(start_info.get("draw_bonus") or 0)
+    drawn = _cd_draw(next_player, draw_total)
+    start_info["draw_total"] = draw_total
+    start_info["drawn"] = drawn
+
+    # Reset next player's turn flags
+    prev_last = (next_player.cd_turn_flags or {}).get("last_played")
+    next_player.cd_turn_flags = {
+        "action_used": False,
+        "bonus_used": False,
+        "draws_this_turn": 0,
+        "last_played": prev_last,
+    }
+
+    # Persist status list (duration decremented) + hp changes + deck/hand changes + flags
+    next_player.save(update_fields=["cd_status", "hp", "cd_deck", "cd_hand", "cd_turn_flags"])
+
+    # End game if someone died from tick damage
+    _cd_finish_if_dead(game)
+
+    # Build response state
+    state = game.to_public_state(for_user=request.user)
+    state = enrich_draft_options(state)
+    if game.mode == Game.Mode.CARD_DUEL:
+        # include duel payload for the requester
+        state["card_duel"] = {
+            "hand": list(me.cd_hand or []),
+            "deck_count": len(me.cd_deck or []),
+            "discard_count": len(me.cd_discard or []),
+            "status": list(me.cd_status or []),
+            "turn_flags": dict(me.cd_turn_flags or {}),
+        }
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "result": {
+                "next_player_id": next_player.id,
+                "start_of_turn": start_info,
+            },
+            "game_state": state,
+        }
+    )
+
+@login_required
+@require_POST
+@transaction.atomic
+def card_duel_pick(request, game_id: int):
+    """
+    Handles the initial draft phase picking logic for Card Duel.
+    Adds chosen card to hand and deals new options if needed.
+    """
+    game = Game.objects.select_for_update().get(id=game_id)
+
+    if game.mode != Game.Mode.CARD_DUEL:
+        return JsonResponse({"detail": "Not a Card Duel game."}, status=400)
+    if game.status != Game.Status.ACTIVE:
+        return JsonResponse({"detail": "Game is not active."}, status=400)
+
+    me = game.players.select_related("user").filter(user=request.user).first()
+    if not me:
+        return JsonResponse({"detail": "You are not a player in this game."}, status=403)
+
+    MAX_PICKS = 5
+    if me.cd_picks_done >= MAX_PICKS:
+        return JsonResponse({"detail": "You already finished selecting cards."}, status=400)
+
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+        code = str(data.get("code") or "").strip()
+    except Exception:
+        return JsonResponse({"detail": "Invalid payload."}, status=400)
+
+    options = list(me.cd_pick_options or [])
+    if code not in options:
+        return JsonResponse({"detail": "Chosen card is not in your current options."}, status=400)
+
+    # Add chosen card to hand
+    me.cd_hand = list(me.cd_hand or [])
+    me.cd_hand.append(code)
+
+    # Return unchosen cards back into deck
+    rest = [c for c in options if c != code]
+    me.cd_deck = list(me.cd_deck or []) + rest
+    random.shuffle(me.cd_deck)
+
+    # Progress
+    me.cd_picks_done += 1
+    if me.cd_picks_done < MAX_PICKS:
+        # Deal next 3 reserved options
+        me.cd_pick_options = card_duel.deal_cd_pick_options(me, k=3)
+    else:
+        me.cd_pick_options = []
+
+    me.save(update_fields=["cd_hand", "cd_deck", "cd_picks_done", "cd_pick_options"])
+    state = game.to_public_state(for_user=request.user)
+    state = enrich_draft_options(state)
+    state["card_duel"] = _cd_build_state_for_user(game, request.user)
+    state["card_duel_pick"] = state["card_duel"].get("pick", {"active": False})
+    return JsonResponse({"ok": True, "game_state": state})
+
+
+
 # ---------- helpers ----------
+
+def _cd_card_payload_from_code(code: str):
+    """
+    Converts a stored Card Duel card code (e.g. CD_STRIKE_5) into a dict:
+    {code, title, image_url}
+    """
+    from .models import CardDuelCardType  # adjust import if your models path differs
+
+    t = CardDuelCardType.objects.filter(code=code).first()
+    title = t.name if t else code
+    img = _cd_image_filename(title)
+    return {
+        "code": code,
+        "title": title,
+        "image_url": static(f"images/CardDuelCards/{img}"),
+    }
+
+def _safe_len(x):
+    return len(x) if x else 0
+
+def _cd_image_filename(card_name: str) -> str:
+    """
+    Maps card names from seed data to actual filenames in static/images/CardDuelCards/
+    """
+    name = (card_name or "").strip()
+    
+    # Explicit mapping based on your file structure screenshot
+    mapping = {
+        "Heal": "RestoreHp.png",
+        "Shield Up": "IronSkin.png", # Assumed mapping
+        "Regen": "RegenBrew.png",
+        "Focus": "BattleFocus.png",
+        "Bless": "PurifyAura.png", 
+        "Poison": "PoisonNeedle.png",
+        "Burn": "BurningMark.png",
+        "Weaken": "WeakenCurse.png",
+        "Vulnerable": "StunShock.png", # Assumed mapping
+        "Silence": "SilenceSeal.png",
+        "Strike": "Strike.png",
+        "Pierce": "Strike.png", # Fallback, or StunShock
+        "Tactical Draw": "CardCycle.png", # or LuckyDraw.png
+        "Cleanse": "AntidoteKit.png",
+        "Sunder": "StunShock.png", 
+        "Venom Strike": "PoisonNeedle.png",
+        "Flame Jab": "BurningMark.png",
+        "Heal": "RestoreHp.png",
+        "Iron Skin": "IronSkin.png",
+        "Regen Brew": "RegenBrew.png",
+        "Battle Focus": "BattleFocus.png",
+        "Purify Aura": "PurifyAura.png",
+        "Card Cycle": "CardCycle.png",
+        "Guard Swap": "GuardSwap.png",
+        "Quick Fix": "RegenBrew.png",
+        "Weaken Curse": "WeakenCurse.png",
+    }
+    
+    if name in mapping:
+        return mapping[name]
+
+    # Fallback to simple removal of spaces if not found
+    base = re.sub(r"[^A-Za-z0-9]+", " ", name).title().replace(" ", "")
+    return f"{base}.png"
 
 def _json_ok(game, request, extra=None):
     payload = {"ok": True, "game_state": game.to_public_state(for_user=request.user)}
@@ -1373,7 +2559,6 @@ def _end_turn_safely(game):
     game.save(update_fields=["current_turn_index"])
 
 
-
 def _apply_hp_damage_with_shield(player, dmg: int) -> bool:
     """
     Returns True if blocked by shield_points, else False.
@@ -1405,6 +2590,9 @@ def _apply_hp_damage_with_shield(player, dmg: int) -> bool:
 @require_POST
 @transaction.atomic
 def duel_select_opponent(request, game_id):
+    """
+    Initiator selects the opponent for the duel.
+    """
     game = get_object_or_404(Game, id=game_id)
     me = _get_me(game, request)
     if me is None:
@@ -1452,6 +2640,10 @@ def duel_select_opponent(request, game_id):
 @require_POST
 @transaction.atomic
 def duel_commit(request, game_id):
+    """
+    Players commit their action (Attack/Defend/Bluff).
+    Deducts coins (Defend) or uses card (Bluff) as cost.
+    """
     game = get_object_or_404(Game, id=game_id)
     me = _get_me(game, request)
     if me is None:
@@ -1513,6 +2705,10 @@ def duel_commit(request, game_id):
 @require_POST
 @transaction.atomic
 def duel_predict(request, game_id):
+    """
+    Players predict the opponent's action.
+    Computes scores and determines winner/draw if both predicted.
+    """
     game = get_object_or_404(Game, id=game_id)
     me = _get_me(game, request)
     if me is None:
@@ -1599,6 +2795,10 @@ def duel_predict(request, game_id):
 @require_POST
 @transaction.atomic
 def duel_choose_reward(request, game_id):
+    """
+    Winner selects a reward (coins, damage, pushback, steal card).
+    Applies the effect and ends the turn.
+    """
     game = get_object_or_404(Game, id=game_id)
     me = _get_me(game, request)
     if me is None:
@@ -1688,6 +2888,10 @@ def duel_choose_reward(request, game_id):
 @require_POST
 @transaction.atomic
 def duel_skip(request, game_id: int):
+    """
+    Skips the current duel phase (if allowed/safe to skip).
+    Only participants or initiator can skip.
+    """
     game = get_object_or_404(Game, id=game_id)
     if game.status != Game.Status.ACTIVE:
         return JsonResponse({"detail": "Game is not active."}, status=400)
@@ -1729,6 +2933,9 @@ def duel_skip(request, game_id: int):
 @login_required
 @require_GET
 def game_chat_messages(request, game_id: int):
+    """
+    Returns the last 50 chat messages for the game.
+    """
     game = get_object_or_404(Game, id=game_id)
 
     # only players or host can read chat
@@ -1757,6 +2964,9 @@ def game_chat_messages(request, game_id: int):
 @require_POST
 @transaction.atomic
 def game_chat_send(request, game_id: int):
+    """
+    Sends a new chat message to the game.
+    """
     game = get_object_or_404(Game, id=game_id)
 
     # only players or host can send

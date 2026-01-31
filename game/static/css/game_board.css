@@ -1,18 +1,40 @@
+/* =========================================================================
+   GAME BOARD STYLESHEET
+   =========================================================================
+   This file defines the styles for the main board game interface, including
+   the board layout, tiles, player tokens, inventory, and various modals
+   (Gun, Shop, Duel, etc.).
+   ========================================================================= */
+
+/* 
+   Main Page Layout
+   - Vertical flex container to stack header and main content.
+   - consistent gap spacing.
+*/
 .board-page {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-/* top bar */
+/* =========================================================================
+   TOP HEADER BAR
+   ========================================================================= */
 
+/* 
+   Header Container
+   - Glassmorphism effect with blur and semi-transparent background.
+   - Flexbox alignment for left/right sections.
+*/
 .board-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.25rem;
   border-radius: 16px;
-  background: radial-gradient(circle at top left, #020617, #020617 40%, #0b1120 100%);
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.25);
 }
 
@@ -22,6 +44,7 @@
   gap: 0.75rem;
 }
 
+/* User Avatar in Header */
 .game-avatar {
   width: 36px;
   height: 36px;
@@ -50,26 +73,44 @@
   gap: 0.75rem;
 }
 
-/* layout */
+/* =========================================================================
+   MAIN BOARD LAYOUT (GRID System)
+   ========================================================================= */
 
+/* 
+   Three-Column Grid:
+   1. Left Sidebar (Inventory/Status) - 270px
+   2. Center Board (Main Gameplay Area) - 1fr (flexible)
+   3. Right Sidebar (Chat/Logs/Rankings) - 300px
+*/
 .board-layout {
   display: grid;
-  grid-template-columns: minmax(240px, 0.9fr) minmax(0, 2fr) minmax(280px, 1.3fr);
-  gap: 1.25rem;
+  grid-template-columns: 270px 1fr 300px;
+  gap: 18px;
+  align-items: start;
 }
 
+.board-main {
+  min-width: 0;
+}
+
+/* 
+   Left Column: Inventory Section
+   - Vertically stacked blocks.
+*/
 .board-inventory {
   align-self: start;
-
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  /* chap paneldagi bloklar orasidagi masofa */
 }
 
 
-/* ---------- Inventory (Support Cards) ---------- */
+/* =========================================================================
+   INVENTORY & SUPPORT CARDS
+   ========================================================================= */
 
+/* Meta info describing inventory constraints or stats */
 .inventory-meta {
   display: flex;
   flex-wrap: wrap;
@@ -84,12 +125,18 @@
   color: #e5e7eb;
 }
 
+/* Card List Container */
 .inventory-cards {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
 }
 
+/* 
+   Individual Inventory Card
+   - Dark translucent background.
+   - borders and shadows for depth.
+*/
 .inv-card {
   border-radius: 14px;
   padding: 0.65rem 0.75rem;
@@ -112,6 +159,7 @@
   margin-bottom: 0.55rem;
 }
 
+/* 'Use' Button on Cards */
 .inv-use-btn {
   width: 100%;
   border-radius: 12px;
@@ -126,16 +174,23 @@
   color: #94a3b8;
 }
 
-/* board container */
+/* =========================================================================
+   BOARD & TILES
+   ========================================================================= */
 
+/* 
+   Board Wrapper
+   - The visual container for the board tiles.
+   - Glassmorphism background.
+*/
 .board-main-wrap {
   border-radius: 18px;
-  background: radial-gradient(circle at top left, #020617, #020617 40%, #020617 100%);
+  background: rgba(2, 6, 23, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.6);
   padding: 1rem;
 }
-
-/* small header above the board */
 
 .board-main-header {
   display: flex;
@@ -154,8 +209,11 @@
   color: #9ca3af;
 }
 
-/* board grid */
-
+/* 
+   Board Grid (The Ring of Tiles)
+   - Uses CSS Grid to create a responsive layout of tiles.
+   - Tiles auto-fit based on minimum width (72px).
+*/
 .board-tiles-ring {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
@@ -164,8 +222,12 @@
   position: relative;
 }
 
-/* base tile */
 
+/* 
+   Single Board Tile
+   - Flex center for content.
+   - Smooth transitions for hover/active states.
+*/
 .board-tile {
   position: relative;
   border-radius: 14px;
@@ -189,6 +251,7 @@
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
 }
 
+/* Index number on the tile (0, 1, 2...) */
 .board-tile-index {
   position: absolute;
   top: 6px;
@@ -207,17 +270,18 @@
   justify-content: center;
 }
 
-/* tile tokens container for dynamically injected tokens */
-
+/* 
+   Token Container 
+   - Absolute positioned container for player tokens on a tile.
+   - Tokens stack vertically if multiple players are on the same tile.
+*/
 .tile-tokens {
   position: absolute;
   left: 8px;
   bottom: 8px;
-
   display: flex;
   flex-direction: column;
   align-items: center;
-
   width: auto;
   margin-top: 0;
   gap: 0;
@@ -225,8 +289,12 @@
 }
 
 
-/* tokens (for when JS injects them) */
-
+/* 
+   Player Tokens
+   - Represents a player's position on the board.
+   - Dynamic injection via JS.
+   - 'transform' handles vertical stacking offset.
+*/
 .player-token {
   width: 1.6rem;
   height: 1.6rem;
@@ -236,39 +304,38 @@
   justify-content: center;
   font-size: 0.8rem;
   font-weight: 600;
-
   background: rgba(15, 23, 42, 0.95);
   color: #e5e7eb;
-
   box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.9),
     0 4px 8px rgba(15, 23, 42, 0.4);
-
-  /* vertical stack overlap (like your 2nd image) */
+  /* Vertical stack overlap handled by CSS var injected by JS */
   transform: translateY(calc(var(--token-index, 0) * -10px));
 }
 
+/* Highlight for the current user's token */
 .player-token-you {
   background: #f59e0b;
   color: #111827;
   border-color: #fbbf24;
 }
 
+/* Highlight for the token of the player whose turn it currently is */
 .player-token-current {
   box-shadow: 0 0 0 2px #f97316,
     0 0 12px rgba(249, 115, 22, 0.7);
 }
 
+/* Highlight for the Tile that is currently active/selected */
 .board-tile-current {
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.85),
     0 8px 30px rgba(56, 189, 248, 0.14);
 }
 
-.board-tile:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 14px 30px rgba(2, 6, 23, 0.45);
-}
-
-/* tile colors – must match board-tile-{{ tile.type|lower }} */
+/* =========================================================================
+   TILE TYPE COLORS
+   =========================================================================
+   Specific gradients/styles for different tile types (Start, Finish, Trap, etc.)
+*/
 
 .board-tile-start {
   background: linear-gradient(135deg, #22c55e, #4ade80);
@@ -320,7 +387,11 @@
   color: #ffedd5;
 }
 
-/* ---- Gun modal shell ---- */
+/* =========================================================================
+   GUN MODAL (Target Selection)
+   ========================================================================= */
+
+/* Modal Overlay */
 .gun-modal {
   position: fixed;
   inset: 0;
@@ -336,6 +407,7 @@
   display: none;
 }
 
+/* Modal Card Style */
 .gun-card {
   width: min(720px, 96vw);
   border-radius: 18px;
@@ -345,7 +417,7 @@
   padding: 16px;
 }
 
-/* ---- Header ---- */
+/* Header Config */
 .gun-head {
   display: flex;
   align-items: center;
@@ -376,22 +448,19 @@
   text-shadow: 0 0 8px rgba(255, 60, 60, .35);
 }
 
-/* Close (X) button used in Gun + Duel headers */
+/* Close Button (X) */
 .gun-x {
   width: 36px;
   height: 36px;
   border-radius: 12px;
   display: grid;
   place-items: center;
-
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.18);
-
   color: #e5e7eb;
   font-size: 18px;
   font-weight: 900;
   line-height: 1;
-
   cursor: pointer;
   transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease, color 0.15s ease;
 }
@@ -407,21 +476,20 @@
   transform: scale(0.96);
 }
 
-
-
 #dHeaderRight {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-/* ---- Body ---- */
+/* Sub-header text */
 .gun-sub {
   margin-top: 10px;
   color: rgba(255, 255, 255, .75);
   font-size: 13px;
 }
 
+/* Grid of Targets */
 .gun-target-grid {
   margin-top: 14px;
   display: grid;
@@ -429,7 +497,7 @@
   gap: 10px;
 }
 
-/* target card button */
+/* Individual Target Button */
 .gun-target {
   text-align: left;
   width: 100%;
@@ -442,6 +510,7 @@
   transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
 }
 
+/* Target Button Hover State */
 .gun-target:hover {
   transform: translateY(-1px);
   border-color: rgba(255, 60, 60, .35);
@@ -459,7 +528,10 @@
   color: rgba(255, 255, 255, .65);
 }
 
-/* ---- Footer ---- */
+/* 
+   Modal Footer 
+   - Contains action buttons and feedback messages.
+*/
 .gun-foot {
   margin-top: 14px;
   display: flex;
@@ -487,7 +559,10 @@
   background: rgba(255, 255, 255, .10);
 }
 
-
+/* 
+   Gun-Specific Tile (Red/Danger Theme) 
+   - Style for the tile that triggers the gun modal.
+*/
 .board-tile-gun {
   background:
     radial-gradient(120% 120% at top left, #ff4d4d 0%, #7a0f0f 55%, #120404 100%);
@@ -505,6 +580,9 @@
 }
 
 
+
+
+/* List of selectable targets */
 .gun-targets {
   display: flex;
   gap: 10px;
@@ -512,14 +590,20 @@
   margin-top: 12px;
 }
 
-
+/* 
+   Empty Tile Variant 
+   - Used for structural spacing in the grid.
+*/
 .board-tile-empty {
   background: linear-gradient(135deg, #1e293b, #0f172a);
   color: #9ca3af;
 }
 
-/* board legend */
-
+/* =========================================================================
+   BOARD LEGEND
+   =========================================================================
+   - Explanatory key for board colors/symbols.
+*/
 .board-legend {
   display: flex;
   flex-wrap: wrap;
@@ -542,7 +626,9 @@
   box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.8);
 }
 
-/* sidebar */
+/* =========================================================================
+   RIGHT SIDEBAR (Game Info)
+   ========================================================================= */
 
 .board-sidebar {
   display: flex;
@@ -550,10 +636,16 @@
   gap: 1rem;
 }
 
+/* 
+   Sidebar Section Container
+   - Standard glassmorphism block for sidebar widgets.
+*/
 .sidebar-section {
   padding: 0.75rem 1rem;
   border-radius: 14px;
-  background: radial-gradient(circle at top left, #020617, #020617 40%, #020617 100%);
+  background: rgba(2, 6, 23, 0.45);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.7);
 }
 
@@ -562,6 +654,10 @@
   margin-bottom: 0.5rem;
 }
 
+/* 
+   Dice Display Wrapper 
+   - Container for the 3D dice component.
+*/
 .dice-display-wrapper {
   display: flex;
   flex-direction: column;
@@ -576,9 +672,13 @@
   font-size: 0.85rem;
 }
 
-/* =========================
-   3D Dice (scoped for board)
-   ========================= */
+/* =========================================================================
+   3D DICE COMPONENT
+   =========================================================================
+   - Pure CSS 3D implementation of a rolling die.
+   - Uses 3D transforms (rotateX/Y/Z) to show specific faces.
+   - 'data-roll' attribute determines the final rotation.
+*/
 
 .dice-display {
   display: flex;
@@ -592,7 +692,10 @@
   text-align: center;
 }
 
-/* container provides perspective */
+/* 
+   Perspective Container 
+   - Establishes the 3D scene depth.
+*/
 .bq-dice {
   display: grid;
   place-items: center;
@@ -600,7 +703,11 @@
   width: 100%;
 }
 
-/* cube wrapper */
+/* 
+   The Die Object
+   - A cube constructed from 6 faces.
+   - Preserves 3D relationships of children.
+*/
 .bq-die-list {
   display: grid;
   grid-template-columns: 1fr;
@@ -613,7 +720,10 @@
   transform-style: preserve-3d;
 }
 
-/* transitions like your demo (odd/even) */
+/* 
+   Rolling Animation Timing 
+   - Different durations for odd/even rolls to vary the feel.
+*/
 .bq-die-list.even-roll {
   transition: transform 1.5s ease-out;
 }
@@ -622,7 +732,10 @@
   transition: transform 1.25s ease-out;
 }
 
-/* a single face */
+/* 
+   Die Face Structure
+   - Each face is a 3x3 grid to position pips (dots) correctly.
+*/
 .bq-die-item {
   grid-column: 1;
   grid-row: 1;
@@ -649,7 +762,7 @@
     0 14px 30px rgba(0, 0, 0, 0.25);
 }
 
-/* pip */
+/* The Pip (Dot) Style */
 .bq-dot {
   align-self: center;
   justify-self: center;
@@ -660,12 +773,16 @@
   box-shadow: inset -2px 2px 4px rgba(0, 0, 0, 0.45);
 }
 
-/* 🔧 FIX: reset grid position before face-specific rules */
+/* Ensure pips don't inherit grid area from parent container implicitly */
 .bq-die-item .bq-dot {
   grid-area: auto;
 }
 
-/* === Final rotations per roll value (copied logic from your demo, scaled for our cube) === */
+/* 
+   Rotation Logic (Outcomes)
+   - Specific angles to display faces 1-6.
+   - Includes multiple spins (360deg+) for the rolling effect.
+*/
 .bq-die-list.even-roll[data-roll="1"] {
   transform: rotateX(360deg) rotateY(720deg) rotateZ(360deg);
 }
@@ -714,7 +831,11 @@
   transform: rotateX(-360deg) rotateY(-900deg) rotateZ(-360deg);
 }
 
-/* === 3D positioning of faces (translateZ must be half-ish of cube size) === */
+/* 
+   Face Construction (Cube Assembly)
+   - Rotates and translates each face to form the cube.
+   - translateZ is approx half the width (36px for 72px cube).
+*/
 .bq-die-item[data-side="1"] {
   transform: rotate3d(0, 0, 0, 90deg) translateZ(36px);
 }
@@ -739,7 +860,10 @@
   transform: rotate3d(1, 0, 0, 180deg) translateZ(36px);
 }
 
-/* pip layouts */
+/* 
+   Pip Config (Grid Placements)
+   - Assigns dots to grid areas (one-nine) per face number.
+*/
 .bq-die-item[data-side="1"] .bq-dot:nth-of-type(1) {
   grid-area: five;
 }
@@ -825,7 +949,13 @@
 }
 
 
-/* players list */
+/* 
+   =========================================================================
+   PLAYER LIST (Sidebar)
+   =========================================================================
+   - Displays listing of players in the current game session.
+   - Includes avatars, names, roles, and basic stats.
+*/
 
 .sidebar-player-count {
   font-size: 0.8rem;
@@ -886,6 +1016,10 @@
   color: #9ca3af;
 }
 
+/* 
+   Player Role Badges 
+   - Visual indicators for current turn, self, etc.
+*/
 .player-role {
   font-size: 0.7rem;
   padding: 2px 6px;
@@ -915,7 +1049,99 @@
   font-weight: 600;
 }
 
-/* ===== Rankings (right sidebar) ===== */
+
+/* =========================================================================
+   COMPACT PLAYER LIST (Card Duel Variant)
+   =========================================================================
+   - A simplified player list for modes with limited screen real estate.
+*/
+
+.compact-player-item {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  margin-bottom: 8px;
+}
+
+.compact-player-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.compact-player-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.compact-role {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.compact-role.you-tag {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fde68a;
+}
+
+.compact-player-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.compact-stat-row {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8rem;
+}
+
+.compact-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+/* Stat-specific colors for readability */
+.compact-stat.hp {
+  color: #fca5a5;
+}
+
+.compact-stat.shield {
+  color: #93c5fd;
+}
+
+.compact-stat.deck {
+  color: #c4b5fd;
+}
+
+.compact-stat.hand {
+  color: #fde68a;
+}
+
+.compact-stat.coins {
+  color: #fbbf24;
+}
+
+.compact-stat.pos {
+  color: #60a5fa;
+}
+
+
+/* =========================================================================
+   RANKINGS (Right Sidebar)
+   =========================================================================
+   - Displays player leaderboard positions.
+*/
 
 .rank-row {
   display: flex;
@@ -959,6 +1185,7 @@
   font-weight: 700;
 }
 
+/* Stat highlight colors */
 .rank-stat.hp {
   color: #f87171;
 }
@@ -978,6 +1205,10 @@
   min-width: 0;
 }
 
+/* 
+   Rank Badge 
+   - Circular icon denoting rank tier (Gold, Silver, Bronze, etc.).
+*/
 .rank-badge {
   width: 42px;
   height: 42px;
@@ -1027,9 +1258,12 @@
   color: #bfdbfe;
 }
 
-/* ===== Players status (improved list) ===== */
 
-/* ===== Players status (clean card layout) ===== */
+/* =========================================================================
+   PLAYER STATUS LIST
+   =========================================================================
+   - Detailed cards showing comprehensive status for each player.
+*/
 
 .player-status-list {
   display: flex;
@@ -1037,7 +1271,10 @@
   gap: 12px;
 }
 
-/* card */
+/* 
+   Player Status Card 
+   - Main container for individual player stats.
+*/
 .ps-item {
   border-radius: 16px;
   padding: 14px;
@@ -1091,6 +1328,7 @@
   flex-wrap: wrap;
 }
 
+/* Status Chips (Turn, Alive, Dead, etc.) */
 .ps-chip {
   font-size: 0.72rem;
   padding: 3px 10px;
@@ -1121,7 +1359,10 @@
   color: #fecaca;
 }
 
-/* stats row */
+/* 
+   Stats Grid 
+   - Grid layout for numerical stats (HP, Coins, etc.) within the card.
+*/
 .ps-right {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1150,7 +1391,7 @@
   color: #ffffff;
 }
 
-/* small screens: keep boxes readable */
+/* Responsive adjustment for very small screens */
 @media (max-width: 420px) {
   .ps-right {
     grid-template-columns: 1fr;
@@ -1159,7 +1400,13 @@
 
 
 
-/* dice log */
+/* 
+   =========================================================================
+   DICE ACTIVITY LOG
+   =========================================================================
+   - Scrollable area recording game events and dice rolls.
+   - Text colors assigned via player index classes (act-p0 to act-p5).
+*/
 .dice-log {
   max-height: 180px;
   overflow-y: auto;
@@ -1184,45 +1431,46 @@
   opacity: 0.95;
 }
 
-/* 6 distinct player colors (stable by turn_order) */
+/* 
+   Player Color Map (Dice Log)
+   - Consistent coloring for player names in the activity stream.
+*/
 .dice-log .act-name.act-p0 {
   color: #60a5fa;
 }
 
-/* blue */
+/* Blue */
 .dice-log .act-name.act-p1 {
   color: #34d399;
 }
 
-/* green */
+/* Green */
 .dice-log .act-name.act-p2 {
   color: #fbbf24;
 }
 
-/* amber */
+/* Amber */
 .dice-log .act-name.act-p3 {
   color: #f87171;
 }
 
-/* red */
-.dice-log .act-name.act-p4 {
+/* Purple */
+.dice-log .act-name.act-p5 {
   color: #a78bfa;
 }
 
-/* purple */
-.dice-log .act-name.act-p5 {
-  color: #22d3ee;
-}
 
-/* cyan */
-
-
-/* ===== Finish Modal ===== */
+/* =========================================================================
+   GENERIC MODAL COMPONENTS
+   =========================================================================
+   - Reusable modal structure (Finish, Shop, etc.).
+*/
 
 .bq-hidden {
   display: none !important;
 }
 
+/* Modal Overlay */
 .bq-modal {
   position: fixed;
   inset: 0;
@@ -1234,6 +1482,7 @@
   background: rgba(0, 0, 0, 0.72);
 }
 
+/* Modal Content Container */
 .bq-modal-card {
   width: min(720px, 100%);
   border-radius: 16px;
@@ -1277,6 +1526,10 @@
   font-size: 0.92rem;
 }
 
+/* 
+   Data Table (Modal Context)
+   - Used for displaying stats, rankings, or history within a modal.
+*/
 .bq-table-wrap {
   overflow: auto;
   border-radius: 12px;
@@ -1308,6 +1561,10 @@
   font-weight: 700;
 }
 
+/* 
+   Status Pills 
+   - Small badges indicating game state (Winner, Alive, Eliminated).
+*/
 .bq-pill {
   display: inline-flex;
   align-items: center;
@@ -1339,7 +1596,13 @@
 }
 
 
-/* --- Question modal --- */
+/* 
+   =========================================================================
+   QUESTION/EVENT MODAL (Interactive)
+   =========================================================================
+   - Handles game events, questions, decisions, or prompts throughout gameplay.
+*/
+
 .qmodal.is-hidden {
   display: none;
 }
@@ -1357,6 +1620,11 @@
   backdrop-filter: blur(2px);
 }
 
+/* 
+   Card Container 
+   - Centered card with a slight top offset.
+   - Distinctive radial gradient background.
+*/
 .qmodal-card {
   position: relative;
   width: min(560px, calc(100% - 2rem));
@@ -1386,6 +1654,7 @@
   letter-spacing: 0.2px;
 }
 
+/* Header Info/Status Buttons */
 .qhead-btn {
   border-radius: 12px;
   padding: 10px 14px;
@@ -1411,6 +1680,10 @@
   padding: 1rem 1.25rem 1.25rem;
 }
 
+/* 
+   Countdown Timer Bar 
+   - Visual progress bar for timed decisions.
+*/
 .qtimer {
   position: relative;
   width: 100%;
@@ -1441,12 +1714,13 @@
   display: none;
 }
 
-
+/* Prompt Text Area */
 .qprompt {
   margin: 0 0 0.9rem;
   font-size: 1.05rem;
 }
 
+/* Choice Buttons Layout */
 .qchoices {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1477,7 +1751,14 @@
   transform: translateY(0) scale(0.985);
 }
 
-/* --- Shop modal --- */
+/* 
+   =========================================================================
+   SHOP MODAL
+   =========================================================================
+   - Interface for purchasing cards or upgrades.
+   - Grid layout adapted for shop offers.
+*/
+
 .smodal.is-hidden {
   display: none;
 }
@@ -1495,6 +1776,7 @@
   backdrop-filter: blur(2px);
 }
 
+/* Shop Card Container (wider than question modal) */
 .smodal-card {
   position: relative;
   width: min(840px, calc(100% - 2rem));
@@ -1528,6 +1810,7 @@
   padding: 1rem 1.25rem 1.25rem;
 }
 
+/* Shop Offer Grid Layout */
 .sgrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1540,6 +1823,7 @@
   }
 }
 
+/* Column within the shop grid */
 .scol {
   border: 1px solid rgba(148, 163, 184, 0.14);
   border-radius: 14px;
@@ -1552,6 +1836,7 @@
   gap: 10px;
 }
 
+/* Individual Offer Item */
 .soffer {
   display: flex;
   align-items: center;
@@ -1581,6 +1866,7 @@
   white-space: nowrap;
 }
 
+/* Price Tag/Button */
 .sprice {
   padding: 6px 10px;
   border-radius: 999px;
@@ -1591,13 +1877,20 @@
   font-size: 0.85rem;
 }
 
-/* --- Draft modal --- */
+/* 
+   =========================================================================
+   DRAFT MODE MODAL
+   =========================================================================
+   - Specialized modal for the card drafting phase.
+   - Highlights card choices with visual flair.
+*/
+
 #draftModal .qmodal-card {
   max-width: 520px;
   background: #0f172a;
-  /* dark slate */
+  /* Dark Slate theme */
   border: 2px solid #6366f1;
-  /* indigo */
+  /* Indigo accent */
   box-shadow: 0 0 25px rgba(99, 102, 241, 0.35);
 }
 
@@ -1611,7 +1904,7 @@
 
 #draftModal .qmodal-header h3 {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 500;
   color: #e5e7eb;
 }
 
@@ -1625,7 +1918,10 @@
   padding-top: 16px;
 }
 
-/* Draft choice buttons */
+/* 
+   Draft Choices Grid 
+   - 3-column layout for selectable cards.
+*/
 #draftChoices {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1656,17 +1952,18 @@
   box-shadow: none;
 }
 
-/* Feedback text */
+/* Validation Feedback */
 #draftFeedback {
   margin-top: 12px;
   min-height: 18px;
   font-size: 13px;
   color: #f87171;
-  /* red for errors */
 }
 
-/* ===== Draft card images ===== */
-
+/* 
+   Draft Card Visuals 
+   - Image and label styling for each draft option.
+*/
 #draftChoices .draft-choice {
   display: flex;
   flex-direction: column;
@@ -1676,14 +1973,13 @@
 }
 
 #draftChoices .draft-choice-img {
-  width: 120px;
-  height: 120px;
+  width: 100%;
+  height: auto;
   border-radius: 12px;
   object-fit: cover;
-  /* transition: transform 0.15s ease, box-shadow 0.15s ease; */
 }
 
-/* hover interaction */
+/* Hover Interaction Effects */
 #draftChoices .draft-choice-img {
   position: relative;
 }
@@ -1697,14 +1993,14 @@
   pointer-events: none;
 }
 
-/* title under image */
+/* Card Title */
 #draftChoices .draft-choice span {
   font-size: 13px;
   font-weight: 600;
   color: #e5e7eb;
 }
 
-/* disabled state */
+/* Disabled State Handling */
 #draftChoices .draft-choice:disabled .draft-choice-img {
   opacity: 0.5;
   transform: none;
@@ -1712,7 +2008,7 @@
 }
 
 
-/* Mobile fallback */
+/* Responsive Fallback for Mobile */
 @media (max-width: 640px) {
   #draftChoices {
     grid-template-columns: 1fr;
@@ -1720,7 +2016,14 @@
 }
 
 
-/* --- Duel modal --- */
+/* 
+   =========================================================================
+   DUEL MODAL
+   =========================================================================
+   - Interface for initiating or managing a 1v1 duel.
+   - Shows player options and stats comparison.
+*/
+
 .dmodal.is-hidden {
   display: none;
 }
@@ -1738,6 +2041,7 @@
   backdrop-filter: blur(2px);
 }
 
+/* Duel Card Container (Standard Width) */
 .dmodal-card {
   position: relative;
   width: min(760px, calc(100% - 2rem));
@@ -1765,6 +2069,7 @@
   padding: 1rem 1.25rem 1.25rem;
 }
 
+/* 3-Column Grid for Duel Options */
 .dgrid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -1777,6 +2082,7 @@
   }
 }
 
+/* Duel Action Button */
 .dbtn {
   width: 100%;
   padding: 0.95rem 0.95rem;
@@ -1812,6 +2118,7 @@
   color: #cbd5e1;
 }
 
+/* Outcome Reveal Area */
 .dreveal {
   margin-top: 10px;
   border: 1px solid rgba(148, 163, 184, 0.14);
@@ -1836,7 +2143,10 @@ body.modal-open {
   overflow: hidden;
 }
 
-/* Correct / wrong feedback states */
+/* 
+   Feedback States (Interactions)
+   - Visual queues for correct or incorrect answers in modals.
+*/
 .qchoice-btn.correct {
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.30), rgba(16, 185, 129, 0.16));
   border-color: rgba(34, 197, 94, 0.65);
@@ -1863,6 +2173,7 @@ body.modal-open {
   font-size: 0.95rem;
 }
 
+/* Secondary choice style (dashed border) */
 .qchoice-btn.qchoice-btn-secondary {
   grid-column: 1 / -1;
   text-align: center;
@@ -1876,6 +2187,17 @@ body.modal-open {
   border-color: rgba(241, 196, 15, 0.55);
 }
 
+
+/* 
+   =========================================================================
+   SPECIAL TILES AND ANIMATIONS
+   =========================================================================
+*/
+
+/* 
+   Portal Tile
+   - Features a pulsating animation to signify teleportation availability.
+*/
 .board-tile-portal {
   background: radial-gradient(circle at center, #5f2cff, #2b0d63);
   color: white;
@@ -1905,21 +2227,20 @@ body.modal-open {
   }
 }
 
-/* ===== BONUS TILE DESIGN ===== */
 
+/* 
+   Bonus Tile Design
+   - Premium gold gradient with subtle shine effects.
+   - Highlights bonus rewards like coins.
+*/
 .board-tile.board-tile-bonus {
   position: relative;
   overflow: hidden;
 
-  /* premium gold gradient (less harsh) */
-  /*option 1*/
+  /* Premium gold gradient background */
   background:
     radial-gradient(circle at 35% 20%, rgba(255, 255, 255, 0.16), transparent 55%),
     linear-gradient(135deg, #b45309 0%, #f59e0b 50%, #fde68a 100%);
-  /*option 2*/
-  /* background:
-    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.18), transparent 50%),
-    linear-gradient(135deg, #d4a017 0%, #facc15 45%, #fde047 100%); */
 
   border: 1px solid rgba(255, 215, 0, 0.45);
   box-shadow:
@@ -1929,7 +2250,7 @@ body.modal-open {
   color: #111827;
 }
 
-/* subtle “shine” sweep (gentle, not loud) */
+/* Subtle shine sweep */
 .board-tile.board-tile-bonus::before {
   content: "";
   position: absolute;
@@ -1943,7 +2264,7 @@ body.modal-open {
   pointer-events: none;
 }
 
-/* tiny sparkles (adds delight but still clean) */
+/* Decorative sparkles */
 .board-tile.board-tile-bonus::after {
   content: "";
   position: absolute;
@@ -1955,7 +2276,7 @@ body.modal-open {
   pointer-events: none;
 }
 
-/* inner layout */
+/* Inner Layout / Wrapper */
 .board-tile-bonus .bonus-wrap {
   height: 100%;
   width: 100%;
@@ -1967,7 +2288,7 @@ body.modal-open {
   z-index: 1;
 }
 
-/* icon looks crisp + centered */
+/* Icon / Symbol */
 .board-tile-bonus .bonus-icon {
   font-size: 24px;
   line-height: 1;
@@ -1975,7 +2296,7 @@ body.modal-open {
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.18));
 }
 
-/* BONUS text (more elegant) */
+/* Label Text */
 .board-tile-bonus .bonus-title {
   font-size: 10px;
   font-weight: 900;
@@ -1984,7 +2305,7 @@ body.modal-open {
   opacity: 0.95;
 }
 
-/* amount badge: glassy dark pill */
+/* Amount Badge (Pill) */
 .board-tile-bonus .bonus-badge {
   position: absolute;
   top: 6px;
@@ -2010,27 +2331,23 @@ body.modal-open {
   opacity: 0.95;
 }
 
-/* bonus tile hover: “reward pop” */
-.board-tile.board-tile-bonus:hover {
-  transform: translateY(-4px) scale(1.03);
-  box-shadow:
-    0 16px 34px rgba(245, 158, 11, 0.28),
-    0 0 0 1px rgba(255, 215, 0, 0.35) inset;
-}
-
-/* ===== Responsive Layout ===== */
+/* 
+   Responsive Adjustments 
+   - Adaptation for tablet/mobile viewports.
+*/
 @media (max-width: 1100px) {
   .board-layout {
     grid-template-columns: 1fr;
   }
 }
 
-/* ============================
-   Game Chat (FINAL)
-   - background: #020617
-   - input (no emoji)
-   - send icon button
-============================ */
+/* 
+   =========================================================================
+   GAME CHAT INTERFACE
+   =========================================================================
+   - Real-time chat widget embedded in the sidebar.
+   - Includes message history, user avatars, and input area.
+*/
 
 .chat-section {
   padding: 0 !important;
@@ -2044,7 +2361,10 @@ body.modal-open {
   box-shadow: 0 18px 50px rgba(0, 0, 0, .45);
 }
 
-/* Header */
+/* 
+   Chat Header
+   - Contains participant info or chat title.
+*/
 .ig-chat-header {
   display: flex;
   align-items: center;
@@ -2099,7 +2419,10 @@ body.modal-open {
   color: rgba(226, 232, 240, .70);
 }
 
-/* Body */
+/* 
+   Chat Body / Message Feed
+   - Scrollable container for chat messages.
+*/
 .ig-chat-body {
   height: 270px;
   overflow: auto;
@@ -2107,7 +2430,7 @@ body.modal-open {
   background: #020617;
 }
 
-/* scrollbar */
+/* Custom Scrollbar for Chat Feed */
 .ig-chat-body::-webkit-scrollbar {
   width: 10px;
 }
@@ -2119,7 +2442,10 @@ body.modal-open {
   background-clip: padding-box;
 }
 
-/* Message rows */
+/* 
+   Message Logic
+   - 'chat-row' handles message alignment (left for others, right for '.you').
+*/
 .chat-row {
   display: flex;
   gap: 8px;
@@ -2131,6 +2457,7 @@ body.modal-open {
   display: none;
 }
 
+/* Initials Avatar for Other Players */
 .chat-row:not(.you)::before {
   content: attr(data-initial);
   width: 26px;
@@ -2148,7 +2475,7 @@ body.modal-open {
 }
 
 
-/* Username above message */
+/* Username Display */
 .chat-username {
   font-size: 0.7rem;
   font-weight: 700;
@@ -2164,6 +2491,10 @@ body.modal-open {
   margin-right: 4px;
 }
 
+/* 
+   Chat Bubbles
+   - Different styles for incoming vs. outgoing messages.
+*/
 .chat-bubble {
   max-width: 85%;
   padding: 8px 12px;
@@ -2202,8 +2533,20 @@ body.modal-open {
 
 .chat-row .chat-text {
   margin: 0;
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 12px 18px 18px 12px;
+  line-height: 1.4;
+  font-size: 13px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: #1e293b;
+  color: #f1f5f9;
+  position: relative;
+  word-break: break-word;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
+/* Message tail for others */
 .chat-row:not(.you) .chat-text::after {
   content: "";
   position: absolute;
@@ -2211,7 +2554,7 @@ body.modal-open {
   bottom: 8px;
   width: 10px;
   height: 10px;
-  background: rgba(148, 163, 184, .10);
+  background: #1e293b;
   border-left: 1px solid rgba(148, 163, 184, .16);
   border-bottom: 1px solid rgba(148, 163, 184, .16);
   transform: rotate(45deg);
@@ -2231,11 +2574,14 @@ body.modal-open {
 }
 
 .chat-row.you .chat-text {
+  border-radius: 18px 12px 12px 18px;
   background: linear-gradient(135deg, rgba(140, 70, 255, .92), rgba(88, 70, 255, .92));
   border-color: rgba(167, 139, 250, .35);
   color: #fff;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
 }
 
+/* Message tail for user */
 .chat-row.you .chat-text::after {
   content: "";
   position: absolute;
@@ -2250,7 +2596,7 @@ body.modal-open {
   border-top-right-radius: 3px;
 }
 
-/* Input row */
+/* Chat Input Area */
 .ig-chat-inputrow {
   display: flex;
   align-items: center;
@@ -2260,7 +2606,7 @@ body.modal-open {
   border-top: 1px solid rgba(148, 163, 184, .14);
 }
 
-/* pill */
+/* Input Wrapper Pill */
 .ig-compose {
   flex: 1;
   min-width: 0;
@@ -2277,7 +2623,6 @@ body.modal-open {
   box-shadow: 0 0 0 3px rgba(170, 0, 255, .14);
 }
 
-/* input */
 .ig-chat-input {
   width: 100%;
   min-width: 0;
@@ -2295,7 +2640,7 @@ body.modal-open {
   opacity: .55;
 }
 
-/* send icon button */
+/* Send Button */
 .ig-send-icon {
   width: 44px;
   height: 44px;
@@ -2374,4 +2719,71 @@ body.modal-open {
   height: 72px;
   margin: 0 auto;
   transform: scale(1.1);
+}
+
+.cd-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.cd-panel {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 12px;
+}
+
+.cd-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.cd-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cd-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.cd-hand {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cd-card {
+  text-align: left;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: transparent;
+  cursor: pointer;
+}
+
+.cd-card:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.cd-card-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.cd-card-desc {
+  opacity: .9;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.cd-card-cat {
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: .7;
 }

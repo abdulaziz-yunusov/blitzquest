@@ -3,6 +3,7 @@
 
 {% block title %}Profile - BlitzQuest{% endblock %}
 
+{# === Stylesheets === #}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/profile_v3.css' %}">
 {% endblock %}
@@ -12,8 +13,9 @@
 
 {% block content %}
 <div class="profile-v3-container">
-    <!-- Sidebar Navigation -->
+    {# === Sidebar Navigation === #}
     <aside class="profile-v3-sidebar">
+        {# User Info #}
         <div class="sidebar-user-info">
             <div class="profile-v3-avatar-circle">
                 {% if user.profile.profile_picture %}
@@ -31,6 +33,7 @@
             </div>
         </div>
 
+        {# Navigation Links #}
         <nav class="sidebar-v3-nav">
             <a href="{% url 'game:home' %}" class="v3-nav-btn btn-gradient">
                 <span class="v3-btn-icon">🏠</span>
@@ -45,19 +48,20 @@
         </nav>
     </aside>
 
-    <!-- Main Content Area -->
+    {# === Main Content === #}
     <main class="profile-v3-main">
         <div class="profile-v3-card">
             <h1 class="v3-card-title">Profile</h1>
 
             <div class="v3-card-content">
-                <!-- Left: Account Settings -->
+                {# Left Column: Account Settings #}
                 <div class="v3-settings-col">
-                    <h3 class="v3-section-label">Add Incomes</h3> <!-- Matching reference text -->
+                    <h3 class="v3-section-label">Add Incomes</h3>
 
                     <form method="post" enctype="multipart/form-data" class="v3-profile-form">
                         {% csrf_token %}
 
+                        {# Profile Picture Upload #}
                         <div class="v3-upload-section">
                             <label for="id_profile_picture" class="v3-photo-circle">
                                 <span class="v3-camera-icon">📷</span>
@@ -66,32 +70,38 @@
                             <span class="v3-upload-text">Upload Photo</span>
                         </div>
 
+                        {# Username Field #}
                         <div class="v3-form-group">
                             <label>Username</label>
-                            <input type="text" name="username" value="{{ user.username }}" placeholder="Username">
+                            <input type="text" name="username" value="{{ user.username }}" placeholder="Username"
+                                class="editable-field" disabled>
                         </div>
 
+                        {# Email Field #}
                         <div class="v3-form-group">
                             <label>Email</label>
-                            <input type="email" name="email" value="{{ user.email }}" placeholder="Email">
+                            <input type="email" name="email" value="{{ user.email }}" placeholder="Email"
+                                class="editable-field" disabled>
                         </div>
 
+                        {# Joined Date (Read-only) #}
                         <div class="v3-form-group">
                             <label>Joined On</label>
                             <div class="date-input-wrapper">
-                                <input type="text" value="{{ user.date_joined|date:'d.m.y' }}" readonly>
+                                <input type="text" value="{{ user.date_joined|date:'d.m.Y' }}" readonly>
                                 <span class="calendar-icon">📅</span>
                             </div>
                         </div>
 
+                        {# Action Buttons #}
                         <div class="v3-form-actions">
-                            <button type="button" class="v3-btn-ghost">Change info</button>
-                            <button type="submit" class="v3-btn-primary">Save info</button>
+                            <button type="button" class="v3-btn-ghost" id="changeInfoBtn">Change info</button>
+                            <button type="submit" class="v3-btn-primary" id="saveInfoBtn" disabled>Save info</button>
                         </div>
                     </form>
                 </div>
 
-                <!-- Right: History -->
+                {# Right Column: Game History #}
                 <div class="v3-history-col">
                     <h3 class="v3-section-label">History</h3>
 
@@ -121,8 +131,11 @@
     </main>
 </div>
 
+{# === Profile Scripts === #}
 <script>
-    // Preview image on selection
+    /**
+     * Preview uploaded profile picture before form submission
+     */
     document.getElementById('id_profile_picture').onchange = function (evt) {
         const [file] = this.files;
         if (file) {
@@ -135,5 +148,31 @@
             }
         }
     }
+
+    /**
+     * Enable/disable form fields for editing
+     */
+    const changeInfoBtn = document.getElementById('changeInfoBtn');
+    const saveInfoBtn = document.getElementById('saveInfoBtn');
+    const editableFields = document.querySelectorAll('.editable-field');
+    const profileForm = document.querySelector('.v3-profile-form');
+
+    changeInfoBtn.addEventListener('click', function () {
+        // Enable all editable fields
+        editableFields.forEach(field => {
+            field.disabled = false;
+        });
+
+        // Enable the Save Info button
+        saveInfoBtn.disabled = false;
+
+        // Visual feedback
+        changeInfoBtn.style.opacity = '0.6';
+    });
+
+    // Form submission feedback
+    profileForm.addEventListener('submit', function (e) {
+        saveInfoBtn.textContent = 'Saving...';
+    });
 </script>
 {% endblock %}

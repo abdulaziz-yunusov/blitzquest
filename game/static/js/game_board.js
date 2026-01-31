@@ -1,5 +1,23 @@
-// ---------- helpers ----------
+/**
+ * =========================================================================
+ * GAME BOARD LOGIC & HELPERS
+ * =========================================================================
+ * Comprehensive logic for the main game board interactions:
+ * - Cookie and token helpers
+ * - Game ID resolution
+ * - Activity logging and state diffing
+ * - UI updates for Dice, Modals (Question, Shop, Gun)
+ */
 
+// -------------------------------------------------------------------------
+// HELPER FUNCTIONS
+// -------------------------------------------------------------------------
+
+/**
+ * Retrieves the value of a cookie by its name.
+ * @param {string} name - The name of the cookie to retrieve.
+ * @returns {string|null} The decoded cookie value, or null if not found.
+ */
 function getCookie(name) {
     if (!document.cookie) return null;
     const cookies = document.cookie.split(";").map(c => c.trim());
@@ -11,6 +29,11 @@ function getCookie(name) {
     return null;
 }
 
+/**
+ * Escapes HTML special characters in a string to prevent XSS.
+ * @param {string} str - The string to escape.
+ * @returns {string} The HTML-escaped string.
+ */
 function escapeHtml(str) {
     if (str === null || str === undefined) return "";
     return String(str)
@@ -20,6 +43,10 @@ function escapeHtml(str) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
+/**
+ * Retrieves the CSRF token from the 'csrftoken' cookie.
+ * @returns {string} The CSRF token, or an empty string if not found.
+ */
 function getCSRFToken() {
     // Django default cookie name:
     const name = "csrftoken";
@@ -31,6 +58,13 @@ function getCSRFToken() {
     return "";
 }
 
+/**
+ * Attempts to resolve the current Game ID from various sources:
+ * 1. Global window.GAME_ID variable
+ * 2. data-game-id attribute on DOM elements
+ * 3. URL path regex matching
+ * @returns {number|null} The game ID as a number, or null if not found.
+ */
 function getGameIdFromPage() {
     // 1) if you already set window.GAME_ID, use it
     if (typeof window.GAME_ID !== "undefined" && window.GAME_ID) return window.GAME_ID;
@@ -50,6 +84,11 @@ function getGameIdFromPage() {
     return null;
 }
 
+/**
+ * Safely parses a Response object as JSON.
+ * @param {Response} res - The fetch API Response object.
+ * @returns {Promise<Object|null>} The parsed JSON data, or null if parsing fails.
+ */
 async function safeJson(res) {
     try {
         return await res.json();
@@ -57,26 +96,53 @@ async function safeJson(res) {
         return null;
     }
 }
-// -----------------------------
-// Activity Log (global, via polling diffs)
-// -----------------------------
+
+// -------------------------------------------------------------------------
+// ACTIVITY LOGGING
+// -------------------------------------------------------------------------
+
+/**
+ * Global activity tracker to store previous player states and seen keys for deduplication.
+ * @global
+ * @property {Map<number, Object>} lastPlayers - Map of playerId to their last known position, hp, and coins.
+ * @property {Set<string>} seenKeys - Set of unique activity keys to prevent duplicate log entries.
+ */
 window.BQ_ACTIVITY = window.BQ_ACTIVITY || {
     lastPlayers: new Map(), // playerId -> { position, hp, coins }
     seenKeys: new Set(),    // to prevent duplicates
 };
 
+/**
+ * Finds a tile object by its position from the game state.
+ * @param {Object} state - The current game state.
+ * @param {number} pos - The position of the tile to find.
+ * @returns {Object|null} The tile object, or null if not found.
+ */
 function tileByPosition(state, pos) {
     if (!state || !Array.isArray(state.tiles)) return null;
     // tiles payload includes { position, type, type_display, ... }
     return state.tiles.find(t => t.position === pos) || null;
 }
 
+/**
+ * Generates a CSS class for player color based on turn order or ID.
+ * @param {Object} player - The player object.
+ * @param {number} player.turn_order - The player's turn order (preferred for stable color).
+ * @param {number} player.id - The player's ID (fallback for stable color).
+ * @returns {string} The CSS class string (e.g., "act-p0").
+ */
 function playerColorClass(player) {
     // stable color by turn order (or fallback by id)
     const idx = (typeof player.turn_order === "number" ? player.turn_order : (player.id || 0)) % 6;
     return `act-p${idx}`;
 }
 
+/**
+ * Appends a new activity line to the dice log.
+ * @param {Object} options - Options for the activity line.
+ * @param {Object} options.player - The player object associated with the activity.
+ * @param {string} options.text - The activity message text.
+ */
 function appendActivityLine({ player, text }) {
     const logEl = document.getElementById("dice-log");
     if (!logEl) return;
@@ -98,6 +164,12 @@ function appendActivityLine({ player, text }) {
     logEl.prepend(p);
 }
 
+/**
+ * Compares previous and current game states to log meaningful activities.
+ * Logs movements, HP changes, and coin transactions.
+ * @param {Object|null} prevState - The previous game state.
+ * @param {Object} nextState - The current game state.
+ */
 function updateActivityFromStateDiff(prevState, nextState) {
     if (!nextState || !Array.isArray(nextState.players)) return;
 
@@ -161,6 +233,14 @@ function updateActivityFromStateDiff(prevState, nextState) {
     }
 }
 
+// -------------------------------------------------------------------------
+// DICE ANIMATIONS & UI
+// -------------------------------------------------------------------------
+
+/**
+ * Retrieves the DOM elements related to the dice display.
+ * @returns {Object} An object containing the die, diceText, and diceDisplay elements.
+ */
 function getDiceEls() {
     return {
         die: document.getElementById("bq-die-1"),
@@ -169,12 +249,20 @@ function getDiceEls() {
     };
 }
 
+/**
+ * Toggles CSS classes for dice animation (odd/even roll).
+ * @param {HTMLElement} die - The dice DOM element.
+ */
 function toggleDiceClasses(die) {
     if (!die) return;
     die.classList.toggle("odd-roll");
     die.classList.toggle("even-roll");
 }
 
+/**
+ * Animates the die to display a specific value.
+ * @param {number} value - The value to display on the die.
+ */
 function animateDieTo(value) {
     const { die } = getDiceEls();
     if (!die) return;
@@ -183,11 +271,13 @@ function animateDieTo(value) {
 }
 
 /**
- * Applies server response after buy/sell/close.
+ * Applies server response after buy/sell/close actions.
+ * Updates global game state and calls relevant renderers.
  * Expected shape: { game_state: ... }
  * This tries to integrate with your existing code:
  * - If you have a function like renderGameState(state), it uses it.
  * - If you have a global setter, it uses it.
+ * @param {Object} payload - The server response payload containing game_state.
  */
 async function applyGameStateUpdate(payload) {
     const state = payload && payload.game_state ? payload.game_state : null;
@@ -211,11 +301,20 @@ async function applyGameStateUpdate(payload) {
         hideShopModal();
     }
 }
-// ---------- UI: question modal ----------
+
+// -------------------------------------------------------------------------
+// UI: QUESTION MODAL
+// -------------------------------------------------------------------------
+
 let questionTimer = null;
 let ACTIVE_QUESTION_KEY = null;   // prevents timer reset on polling
 let QUESTION_TIMER_RUNNING = false;
 
+/**
+ * Starts a countdown timer for a question, executing a callback on timeout.
+ * @param {number} seconds - The duration of the timer in seconds.
+ * @param {Function} onTimeout - The callback function to execute when the timer reaches zero.
+ */
 function startQuestionTimer(seconds = 5, onTimeout) {
     const timer = document.getElementById("question-timer");
     const bar = document.getElementById("qtimer-bar");
@@ -249,6 +348,12 @@ function startQuestionTimer(seconds = 5, onTimeout) {
         }
     }, 1000);
 }
+/**
+ * Generates a unique key for a question to help with deduplication and state management.
+ * Prefers an `id` from the backend, otherwise constructs a key from prompt and correct answer index.
+ * @param {Object} q - The question object.
+ * @returns {string|null} A unique key for the question, or null if the question is invalid.
+ */
 function getQuestionKey(q) {
     if (!q) return null;
 
@@ -261,10 +366,19 @@ function getQuestionKey(q) {
     return `p:${prompt}|c:${correct}`;
 }
 
+/**
+ * Stops the currently running question timer.
+ */
 function stopQuestionTimer() {
     clearInterval(questionTimer);
 }
 
+/**
+ * Submits a question timeout event to the server.
+ * @param {number} gameId - The ID of the current game.
+ * @returns {Promise<Object>} The JSON response from the server.
+ * @throws {Error} If the server response is not OK.
+ */
 async function submitQuestionTimeout(gameId) {
     const resp = await fetch(`/games/${gameId}/answer_question/`, {
         method: "POST",
@@ -284,6 +398,12 @@ async function submitQuestionTimeout(gameId) {
 }
 
 
+/**
+ * Displays the question modal with the given question and game state.
+ * Handles rendering choices, feedback, and interaction logic including a "change question" card.
+ * @param {Object} q - The question object to display.
+ * @param {Object} state - The current game state.
+ */
 function showQuestionModal(q, state) {
     const modal = document.getElementById("questionModal");
     const prompt = document.getElementById("qPrompt");
@@ -441,7 +561,9 @@ function showQuestionModal(q, state) {
 
 }
 
-
+/**
+ * Hides the question modal and stops its timer.
+ */
 function hideQuestionModal() {
     ACTIVE_QUESTION_KEY = null;
     stopQuestionTimer();
@@ -451,6 +573,11 @@ function hideQuestionModal() {
     modal.setAttribute("aria-hidden", "true");
 }
 
+/**
+ * Renders the question UI based on the game state.
+ * Shows the question modal if `state.pending_question` is present, otherwise hides it.
+ * @param {Object} state - The current game state.
+ */
 function renderQuestionUI(state) {
     if (!state) return;
 
@@ -460,6 +587,10 @@ function renderQuestionUI(state) {
         hideQuestionModal();
     }
 }
+
+// -------------------------------------------------------------------------
+// UI: SHOP MODAL
+// -------------------------------------------------------------------------
 
 let SHOP_IS_OPEN = false;
 
@@ -589,6 +720,11 @@ function showShopModal(pendingShop, gameState) {
     // modal.querySelector(".smodal-backdrop")?.addEventListener("click", () => {});
 }
 
+/**
+ * Displays the gun modal, allowing the current player to choose a target.
+ * @param {Object} pendingGun - The `state.pending_gun` object containing target information.
+ * @param {Object} state - The current game state.
+ */
 function showGunModal(pendingGun, state) {
     const modal = document.getElementById("gunModal");
     if (!modal) return;
@@ -656,6 +792,11 @@ function showGunModal(pendingGun, state) {
         });
     });
 }
+
+/**
+ * Skips the current duel phase and closes the duel modal.
+ * Sends a request to the server to skip the duel.
+ */
 async function skipDuelAndClose() {
     const gid = getGameIdFromPage();
 
@@ -682,7 +823,9 @@ async function skipDuelAndClose() {
     hideDuelModal();
 }
 
-
+/**
+ * Hides the gun modal.
+ */
 function hideGunModal() {
     const modal = document.getElementById("gunModal");
     if (!modal) return;
@@ -690,10 +833,20 @@ function hideGunModal() {
     modal.setAttribute("aria-hidden", "true");
 }
 
+/**
+ * Renders the gun UI based on the game state.
+ * Shows the gun modal if `state.pending_gun` is present, otherwise hides it.
+ * @param {Object} state - The current game state.
+ */
 function renderGunUI(state) {
     if (state && state.pending_gun) showGunModal(state.pending_gun, state);
     else hideGunModal();
 }
+
+/**
+ * Skips the current gun action and closes the gun modal.
+ * Sends a request to the server to skip the gun action.
+ */
 async function skipGunAndClose() {
     const gid = getGameIdFromPage();
 
@@ -746,6 +899,10 @@ function hideShopModal() {
     if (feedback) feedback.textContent = "";
 }
 
+/**
+ * Purchases a card from the shop.
+ * @param {number} cardTypeId - The ID of the card type to buy.
+ */
 async function shopBuyCard(cardTypeId) {
     const feedback = document.getElementById("shopFeedback");
     if (feedback) feedback.textContent = "";
@@ -781,6 +938,10 @@ async function shopBuyCard(cardTypeId) {
     }
 }
 
+/**
+ * Sells a card back to the shop.
+ * @param {number} cardInstanceId - The ID of the card instance to sell.
+ */
 async function shopSellCard(cardInstanceId) {
     const feedback = document.getElementById("shopFeedback");
     if (feedback) feedback.textContent = "";
@@ -815,6 +976,9 @@ async function shopSellCard(cardInstanceId) {
     }
 }
 
+/**
+ * Closes the shop on the backend and advances the turn.
+ */
 async function shopClose() {
     const feedback = document.getElementById("shopFeedback");
     if (feedback) feedback.textContent = "";
@@ -854,10 +1018,14 @@ async function shopClose() {
 }
 
 
-// -----------------------------
-// Draft Mode UI + actions
-// -----------------------------
+// -------------------------------------------------------------------------
+// DRAFT MODE UI & ACTIONS
+// -------------------------------------------------------------------------
 
+/**
+ * Toggles the draft modal visibility.
+ * @param {boolean} visible - Whether to show or hide the modal.
+ */
 function setDraftModalVisible(visible) {
     const modal = document.getElementById("draftModal");
     if (!modal) return;
@@ -870,6 +1038,10 @@ function setDraftModalVisible(visible) {
     }
 }
 
+/**
+ * Renders the draft UI if drafting is active.
+ * @param {Object} state - The game state.
+ */
 function renderDraftUI(state) {
     // state.draft expected from backend to_public_state()
     const draft = state && state.draft ? state.draft : null;
@@ -900,7 +1072,7 @@ function renderDraftUI(state) {
         return;
     }
 
-    // Build 3 buttons (options are card_type IDs)
+    // Build buttons (options are card_type IDs)
     choicesEl.innerHTML = options.map((opt) => `
     <button class="qchoice draft-choice"
             type="button"
@@ -934,6 +1106,13 @@ function renderDraftUI(state) {
     });
 }
 
+/**
+ * Sends a draft pick to the server.
+ * @param {number} gameId - The ID of the current game.
+ * @param {number} cardTypeId - The ID of the card type picked.
+ * @returns {Promise<Object>} The server response.
+ * @throws {Error} If the request fails.
+ */
 async function draftPick(gameId, cardTypeId) {
     const resp = await fetch(`/games/${gameId}/draft/pick/`, {
         method: "POST",
@@ -957,10 +1136,14 @@ async function draftPick(gameId, cardTypeId) {
     return resp.json().catch(() => ({}));
 }
 
-// ============================
-// Duel Modal helpers
-// ============================
+// -------------------------------------------------------------------------
+// DUEL MODAL HELPERS
+// -------------------------------------------------------------------------
 
+/**
+ * Shows the duel modal and sets up its behavior.
+ * Prevents closing via backdrop or ESC key to ensure duel resolution.
+ */
 function showDuelModal() {
     const modal = document.getElementById("duelModal");
     if (!modal) return;
@@ -1004,6 +1187,9 @@ function showDuelModal() {
     }
 }
 
+/**
+ * Hides the duel modal and cleans up its content.
+ */
 function hideDuelModal() {
     const modal = document.getElementById("duelModal");
     if (!modal) return;
@@ -1022,13 +1208,21 @@ function hideDuelModal() {
     if (feedback) feedback.textContent = "";
 }
 
-// Optional convenience: show a message inside duel modal
+/**
+ * Displays a feedback message within the duel modal.
+ * @param {string} msg - The message to display.
+ */
 function setDuelFeedback(msg) {
     const el = document.getElementById("dFeedback");
     if (!el) return;
     el.textContent = msg || "";
 }
 
+/**
+ * Renders the Duel UI logic (phases: choose opponent, commit, predict, winner choice).
+ * @param {Object} duel - The duel state object.
+ * @param {Object} gameState - The full game state.
+ */
 function renderDuelUI(duel, gameState) {
     const body = document.getElementById("dBody");
     const feedback = document.getElementById("dFeedback");
@@ -1264,10 +1458,15 @@ function renderDuelUI(duel, gameState) {
     }
 }
 
-// ---------- UI: board ----------
-// Tiles are rendered strictly in ascending position order (0..49),
-// and displayed as 1..50 in the index badge.
+// -------------------------------------------------------------------------
+// UI: BOARD RENDERING
+// -------------------------------------------------------------------------
 
+/**
+ * Updates the board tiles based on the game state.
+ * Handles player tokens, special tile types (Trap, Bonus, Portal, etc.), and highlighting.
+ * @param {Object} state - The game state containing tile and player data.
+ */
 function updateBoardUI(state) {
     if (!state) return;
     const container = document.getElementById("board-tiles");
@@ -1276,7 +1475,7 @@ function updateBoardUI(state) {
     const tilesRaw = Array.isArray(state.tiles) ? state.tiles : [];
     const playersRaw = Array.isArray(state.players) ? state.players : [];
 
-    // FIX: Deduplicate players by ID to prevent visual "4 players" bug
+    // Deduplicate players by ID to prevent visual bugs
     const seenIds = new Set();
     const players = [];
     for (const p of playersRaw) {
@@ -1293,6 +1492,7 @@ function updateBoardUI(state) {
         playersByPos[pos].push(p);
     }
 
+    // Sort tiles by position ASC
     const tiles = tilesRaw.slice().sort((a, b) => {
         const pa = typeof a.position === "number" ? a.position : 0;
         const pb = typeof b.position === "number" ? b.position : 0;
@@ -1310,6 +1510,7 @@ function updateBoardUI(state) {
         let label = tile.label || "";
         const type = (tile.type || tile.tile_type || "empty").toLowerCase();
 
+        // Tile labels if not provided
         if (!label) {
             switch (type) {
                 case "start": label = "Start"; break;
@@ -1328,7 +1529,7 @@ function updateBoardUI(state) {
             }
         }
 
-        /* --- BONUS TILE HTML (🎁 + corner badge) --- */
+        /* --- TILE ICONS & HTML --- */
         let labelHtml = escapeHtml(label);
 
         if (type === "bonus") {
@@ -1341,7 +1542,6 @@ function updateBoardUI(state) {
             labelHtml = `<div class="board-tile-symbol">🔫</div>`;
         }
 
-        // ... (keep rest of tile map logic)
         const tileClasses = ["board-tile", `board-tile-${type}`];
         if (hasCurrent) tileClasses.push("board-tile-current");
         let indexText = String(pos);
@@ -1361,8 +1561,15 @@ function updateBoardUI(state) {
     container.innerHTML = html || "<div>No tiles.</div>";
 }
 
-// ---------- UI: players panel ----------
+// -------------------------------------------------------------------------
+// UI: PLAYERS PANEL
+// -------------------------------------------------------------------------
 
+/**
+ * Updates the players list in the sidebar (Ranking Box).
+ * Orders players by position (descending) so front-runners are top.
+ * @param {Object} state - The game state.
+ */
 function updatePlayersUI(state) {
     // RIGHT BOX = Rankings only
     if (!state) return;
@@ -1383,7 +1590,6 @@ function updatePlayersUI(state) {
     }
 
     // Ranking rule: POSITION (front = higher rank)
-    // If you want coins/hp-based rank, tell me and I’ll switch the sort.
     const ranked = players
         .slice()
         .sort((a, b) => (b.position ?? 0) - (a.position ?? 0))
@@ -1429,6 +1635,11 @@ function updatePlayersUI(state) {
 }
 
 
+/**
+ * Updates the user's status panel (usually at the bottom or top bar).
+ * Filters to show only the current user's stats.
+ * @param {Object} state - The game state.
+ */
 function updatePlayerStatusUI(state) {
     if (!state) return;
 
@@ -1514,9 +1725,15 @@ function updatePlayerStatusUI(state) {
 }
 
 
+// -------------------------------------------------------------------------
+// UI: DICE & TURN CONTROLS
+// -------------------------------------------------------------------------
 
-// ---------- UI: dice / turn ----------
-
+/**
+ * Updates the dice and turn control UI elements.
+ * Handles different game states like "ordering", "active", and "finished".
+ * @param {Object} state - The game state.
+ */
 function updateDiceUI(state) {
     const labelEl = document.getElementById("current-turn-label");
     const rollButton = document.getElementById("roll-button");
@@ -1581,9 +1798,16 @@ function updateDiceUI(state) {
 }
 
 
+// -------------------------------------------------------------------------
+// SUPPORT CARDS (INVENTORY)
+// -------------------------------------------------------------------------
 
-// ---------- Support Cards (inventory) ----------
-
+/**
+ * Uses a support card by sending a request to the server.
+ * @param {number} gameId - The current game ID.
+ * @param {number} cardId - The ID of the card to use.
+ * @param {number|null} targetPlayerId - Optional target player ID.
+ */
 async function useCard(gameId, cardId, targetPlayerId = null) {
     const payload = { card_id: cardId };
     if (targetPlayerId !== null) payload.target_player_id = targetPlayerId;
@@ -1615,6 +1839,10 @@ async function useCard(gameId, cardId, targetPlayerId = null) {
     renderGunUI(state);
 }
 
+/**
+ * Renders the inventory UI (cards the player holds).
+ * @param {Object} state - The game state.
+ */
 function renderInventoryUI(state) {
     const wrap = document.getElementById("inventory-cards");
     if (!wrap) return;
@@ -1680,7 +1908,10 @@ function renderInventoryUI(state) {
     });
 }
 
-// ---------- fetch state ----------
+// -------------------------------------------------------------------------
+// GAME STATE FETCHING & POLLING
+// -------------------------------------------------------------------------
+
 function showOrderModal() {
     const modal = document.getElementById("orderModal");
     if (!modal) return;
@@ -1695,6 +1926,11 @@ function hideOrderModal() {
     modal.setAttribute("aria-hidden", "true");
 }
 
+/**
+ * Computes the provisional turn order based on roll history.
+ * @param {Object} state - The game state.
+ * @returns {Object} An object containing `sorted` (players) and `seqs` (roll sequences).
+ */
 function computeProvisionalOrder(state) {
     const ordering = state.ordering || {};
     const rh = ordering.roll_history || {};
@@ -1734,6 +1970,11 @@ document.addEventListener("click", (e) => {
 });
 
 
+/**
+ * Renders the order modal content.
+ * Shows roll history and rank.
+ * @param {Object} state - The game state.
+ */
 function renderOrderModal(state) {
     const listEl = document.getElementById("orderList");
     const youStatusEl = document.getElementById("orderYourStatus");
@@ -1780,6 +2021,11 @@ function renderOrderModal(state) {
     }
 }
 
+/**
+ * Fetches the latest game state from the server and updates the UI.
+ * Handles different modes (Board Game vs Card Duel).
+ * @param {number} gameId - The current game ID.
+ */
 async function fetchGameState(gameId) {
     try {
         const resp = await fetch(`/games/${gameId}/state/`, {
@@ -1788,6 +2034,40 @@ async function fetchGameState(gameId) {
         if (!resp.ok) return;
 
         const data = await resp.json();
+
+        if (data && (data.mode === "card_duel" || (data.card_duel && data.card_duel.hand))) {
+            // hide board tiles area + legend text if you want
+            const board = document.querySelector(".board-main-wrap");
+            if (board) board.style.display = "none";
+
+            const rollBtn = document.getElementById("roll-button");
+            if (rollBtn) rollBtn.disabled = true;
+
+            // You can render a simple placeholder until you add full hand UI:
+            const activity = document.getElementById("dice-log");
+            if (activity && !activity.dataset.cdOnce) {
+                activity.dataset.cdOnce = "1";
+                activity.insertAdjacentHTML("afterbegin", `<p class="act-line"><span class="act-msg">Card Duel active (board disabled).</span></p>`);
+            }
+
+            // still update side panels:
+            updatePlayersUI(data);
+            updatePlayerStatusUI(data);
+            renderInventoryUI(data);
+            renderGunUI(data);
+            // If Card Duel mode, use Card Duel picker UI (NOT Draft UI)
+            if (data && data.mode === "card_duel") {
+                if (typeof renderCardDuelPickUI === "function") {
+                    renderCardDuelPickUI(data);
+                }
+            } else {
+                renderDraftUI(data);
+            }
+
+            renderQuestionUI(data);
+
+            return;
+        }
 
         updateActivityFromStateDiff(window.GAME_STATE || null, data);
         window.GAME_STATE = data;
@@ -1845,7 +2125,14 @@ async function fetchGameState(gameId) {
     }
 }
 
-// ---------- roll ----------
+// -------------------------------------------------------------------------
+// DICE ROLL LOGIC
+// -------------------------------------------------------------------------
+
+/**
+ * Starts a shuffle animation for a dice element.
+ * @returns {Function|null} A function to stop the shuffle, or null if failed.
+ */
 function startDiceShuffle() {
     const { die } = getDiceEls();
     if (!die) return null;
@@ -1863,6 +2150,12 @@ function startDiceShuffle() {
         clearInterval(interval);
     };
 }
+
+/**
+ * Handles the dice roll action.
+ * Can be triggered by button click (Event) or directly with a URL string.
+ * @param {Event|string} arg - The click event or the URL to fetch.
+ */
 async function handleRollClick(arg) {
     // arg can be an Event OR a URL string
     if (arg && typeof arg.preventDefault === "function") arg.preventDefault();
@@ -1982,7 +2275,9 @@ async function handleRollClick(arg) {
 }
 
 
-// ---------- tokens ----------
+// -------------------------------------------------------------------------
+// PLAYER TOKENS
+// -------------------------------------------------------------------------
 
 function getPlayerInitials(player) {
     const name = (player.username || "").trim();
@@ -1994,10 +2289,15 @@ function getPlayerInitials(player) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
+/**
+ * Renders player tokens onto the board tiles.
+ * Handles multiple players on the same tile by visually stacking/spacing them.
+ * @param {Object} gameState - The current game state.
+ */
 function renderPlayerTokens(gameState) {
     if (!gameState || !Array.isArray(gameState.players)) return;
 
-    // FIX: Deduplicate players for token rendering
+    // Deduplicate players for token rendering
     const seenIds = new Set();
     const uniquePlayers = [];
     for (const p of gameState.players) {
@@ -2059,9 +2359,9 @@ function renderPlayerTokens(gameState) {
         });
     });
 }
-// ============================
+// -------------------------------------------------------------------------
 // GAME CHAT (polling + send)
-// ============================
+// -------------------------------------------------------------------------
 
 let CHAT_POLL_MS = 2000;
 let chatPoller = null;
@@ -2086,23 +2386,38 @@ function escapeHtml(str) {
         .replace(/'/g, "&#039;");
 }
 
+/**
+ * Returns a safety initial for a username.
+ * @param {string} name - The username.
+ * @returns {string} The first character uppercase or "?".
+ */
 function safeInitial(name) {
     const t = (name || "").trim();
     return t ? t[0].toUpperCase() : "?";
 }
 
+/**
+ * Scrolls the chat box to the bottom.
+ */
 function chatScrollToBottom() {
     const { box } = getChatEls();
     if (!box) return;
     box.scrollTop = box.scrollHeight;
 }
 
+/**
+ * Toggles the state of the send button based on input content.
+ */
 function setSendEnabled() {
     const { input, sendBtn } = getChatEls();
     if (!input || !sendBtn) return;
     sendBtn.disabled = (input.value || "").trim().length === 0;
 }
 
+/**
+ * Renders chat messages into the chat box.
+ * @param {Array<Object>} messages - The list of message objects.
+ */
 function renderChatMessages(messages) {
     const { box, liveCount } = getChatEls();
     if (!box) return;
@@ -2130,6 +2445,10 @@ function renderChatMessages(messages) {
     chatScrollToBottom();
 }
 
+/**
+ * Fetches the latest chat messages from the server.
+ * @param {number} gameId - The ID of the game.
+ */
 async function fetchChat(gameId) {
     const res = await fetch(`/games/${gameId}/chat/messages/`, {
         headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -2141,6 +2460,7 @@ async function fetchChat(gameId) {
     renderChatMessages(messages);
 }
 
+// (Duplicate definition: getCSRFToken. Kept for local scope safety if refactored.)
 function getCSRFToken() {
     const name = "csrftoken";
     const cookies = document.cookie ? document.cookie.split(";") : [];
@@ -2151,6 +2471,13 @@ function getCSRFToken() {
     return "";
 }
 
+/**
+ * Sends a chat message to the server.
+ * @param {number} gameId - The ID of the game.
+ * @param {string} text - The message text.
+ * @returns {Promise<Object>} The server response.
+ * @throws {Error} If sending fails.
+ */
 async function sendChat(gameId, text) {
     const res = await fetch(`/games/${gameId}/chat/send/`, {
         method: "POST",
@@ -2170,22 +2497,25 @@ async function sendChat(gameId, text) {
     return data;
 }
 
+/**
+ * Initializes the chat functionality (polling, event listeners).
+ */
 function initChat() {
     const gameId = window.GAME_ID;
     const { input, sendBtn, form } = getChatEls();
     if (!gameId || !input || !sendBtn || !form) return;
 
-    // initial load
+    // Initial load
     fetchChat(gameId);
 
-    // polling
+    // Polling
     if (chatPoller) clearInterval(chatPoller);
     chatPoller = setInterval(() => fetchChat(gameId), CHAT_POLL_MS);
 
-    // input enable/disable
+    // Input enable/disable
     input.addEventListener("input", setSendEnabled);
 
-    // submit
+    // Submit handler
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
@@ -2206,7 +2536,7 @@ function initChat() {
         }
     });
 
-    // Enter => send (oddiy input bo‘lgani uchun)
+    // Enter key support for submission
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
             e.preventDefault();
@@ -2214,27 +2544,14 @@ function initChat() {
         }
     });
 
-    // initial state
+    // Initial state
     setSendEnabled();
 }
 
-
-
-
-// ---------- init ----------
-
-// document.addEventListener("DOMContentLoaded", function () {
-//     if (typeof window.GAME_ID === "undefined") return;
-//
-//     fetchGameState(window.GAME_ID);
-//     window.gamePoller = setInterval(function () {
-//         fetchGameState(window.GAME_ID);
-//     }, 2000);
-//
-//     const rollBtn = document.getElementById("roll-button");
-//     if (rollBtn) rollBtn.addEventListener("click", handleRollClick);
-//     initChat();
-// });
+/**
+ * Main initialization on DOMContentLoaded.
+ * Resolves Game ID, starts polling, and initializes UI handlers.
+ */
 document.addEventListener("DOMContentLoaded", function () {
     const gid = getGameIdFromPage();
     if (!gid) return;
@@ -2247,11 +2564,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const rollBtn = document.getElementById("roll-button");
     if (rollBtn) rollBtn.addEventListener("click", handleRollClick);
 
-    initChat(); // ✅ shu kerak
+    initChat();
 });
 
-
-
+/**
+ * Mock function to open a "Game Finished" modal with leaderboard.
+ * Requires an element with ID "finishModal".
+ * @param {Object} state - The final game state containing the leaderboard.
+ */
 function bqOpenFinishModal(state) {
     const modal = document.getElementById("finishModal");
     const tbody = document.getElementById("finishLeaderboardBody");
@@ -2315,6 +2635,3 @@ function bqOpenFinishModal(state) {
         }
     });
 }
-
-
-

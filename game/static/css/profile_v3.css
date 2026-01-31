@@ -1,20 +1,40 @@
-/* ========== Profile V3 – Exact Match Redesign ========== */
+/* 
+   =========================================================================
+   PROFILE PAGE (V3 REDESIGN)
+   =========================================================================
+   - Modern, glassmorphic profile interface.
+   - Includes sidebar navigation, settings forms, and history tracking.
+   - Features responsive flex/grid layouts with premium visual effects.
+*/
 
-/* Overall Container & Body Class */
+/* 
+   =========================================================================
+   PAGE CONTAINER & BACKGROUND
+   =========================================================================
+*/
+
+/* Forces a specific background for the profile page body */
 body.profile-v3-body {
-    background: url('../images/auth-bg.png') no-repeat center center / cover fixed !important;
+    background: url('../images/board_bg.jpg') no-repeat center center / cover fixed !important;
     overflow-x: hidden;
 }
 
+/* Dark Overlay for better text readability */
 body.profile-v3-body::before {
     content: "";
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(0, 0, 0, 0.7);
     z-index: 0;
     pointer-events: none;
 }
 
+/* Disable generic blur effects on this page */
+body.profile-v3-body .bg-blur {
+    display: none;
+}
+
+/* Main wrapper for sidebar + content */
 .profile-v3-container {
     display: flex;
     min-height: 100vh;
@@ -23,16 +43,28 @@ body.profile-v3-body::before {
     z-index: 1;
 }
 
-/* Sidebar Styling */
+/* 
+   =========================================================================
+   SIDEBAR NAVIGATION
+   =========================================================================
+   - Fixed width sidebar with user summary and navigation links.
+   - Uses backdrop blur for glass effect.
+*/
+
 .profile-v3-sidebar {
     width: 300px;
-    background: rgba(10, 8, 18, 0.4);
-    backdrop-filter: blur(15px);
-    border-right: 1px solid rgba(168, 85, 247, 0.2);
+    background: rgba(10, 8, 18, 0.6);
+    backdrop-filter: blur(20px);
+    border: 2px solid rgba(99, 102, 241, 0.4);
+    border-radius: 24px;
+    margin: 1.5rem;
     display: flex;
     flex-direction: column;
     padding: 3rem 1.5rem;
     z-index: 10;
+    box-shadow:
+        0 0 40px rgba(99, 102, 241, 0.3),
+        inset 0 0 40px rgba(99, 102, 241, 0.1);
 }
 
 .sidebar-user-info {
@@ -81,7 +113,8 @@ body.profile-v3-body::before {
     opacity: 0.8;
 }
 
-/* Sidebar Nav Buttons */
+/* Sidebar Buttons */
+
 .sidebar-v3-nav {
     display: flex;
     flex-direction: column;
@@ -134,26 +167,33 @@ body.profile-v3-body::before {
     opacity: 0.7;
 }
 
-/* Main Content Styling */
+/* 
+   =========================================================================
+   MAIN CONTENT AREA
+   =========================================================================
+   - Central card containing settings forms and history lists.
+*/
+
 .profile-v3-main {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem 4rem;
+    padding: 1.5rem 2rem;
 }
 
 .profile-v3-card {
     width: 100%;
     max-width: 1000px;
-    background: rgba(16, 12, 28, 0.65);
-    backdrop-filter: blur(25px);
+    background: rgba(16, 12, 28, 0.75);
+    backdrop-filter: blur(30px);
     border-radius: 32px;
-    border: 1px solid rgba(168, 85, 247, 0.3);
+    border: 2px solid rgba(99, 102, 241, 0.5);
     padding: 3rem;
     box-shadow:
+        0 0 60px rgba(99, 102, 241, 0.4),
         0 8px 32px 0 rgba(0, 0, 0, 0.8),
-        inset 0 0 20px rgba(168, 85, 247, 0.1);
+        inset 0 0 40px rgba(99, 102, 241, 0.15);
     position: relative;
 }
 
@@ -170,7 +210,11 @@ body.profile-v3-body::before {
     gap: 4rem;
 }
 
-/* Settings Column */
+/* 
+   Column Layouts 
+   - Split view between settings (left) and history (right).
+*/
+
 .v3-settings-col,
 .v3-history-col {
     display: flex;
@@ -185,6 +229,11 @@ body.profile-v3-body::before {
     display: flex;
     align-items: center;
 }
+
+/* 
+   Avatar Upload Component
+   - Interactive area for changing user profile photo.
+*/
 
 .v3-upload-section {
     display: flex;
@@ -227,7 +276,11 @@ body.profile-v3-body::before {
     cursor: pointer;
 }
 
-/* Form Styling */
+/* 
+   Form Styles
+   - Custom input fields with focus states.
+*/
+
 .v3-form-group {
     margin-bottom: 1.5rem;
     display: flex;
@@ -306,7 +359,11 @@ body.profile-v3-body::before {
     box-shadow: 0 15px 30px rgba(99, 102, 241, 0.3);
 }
 
-/* History List */
+/* 
+   Game History List
+   - Scrollable list of recent game sessions.
+*/
+
 .v3-history-list {
     display: flex;
     flex-direction: column;
@@ -372,7 +429,10 @@ body.profile-v3-body::before {
     font-size: 1.2rem;
 }
 
-/* Responsive */
+/* 
+   Responsive Adjustments
+   - Stack sidebar and main content on smaller screens.
+*/
 @media (max-width: 1200px) {
     .profile-v3-card {
         max-width: 900px;

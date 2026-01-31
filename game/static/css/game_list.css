@@ -1,4 +1,10 @@
-/* ========== Game List Page – BlitzQuest ========== */
+/* 
+   =========================================================================
+   GAME LIST PAGE
+   =========================================================================
+   - Displays a list of active and available games.
+   - Includes filtering options and game cards.
+*/
 
 .gl-page {
     margin-top: 1.5rem;
@@ -7,15 +13,22 @@
     gap: 1.3rem;
 }
 
-/* Header card */
+/* 
+   =========================================================================
+   HEADER SECTION
+   =========================================================================
+   - Top area with page title and primary actions.
+   - Features an animated border glow.
+*/
 
 .gl-header-card {
     border-radius: 20px;
-    background: radial-gradient(circle at top left,
-            rgba(148, 163, 184, 0.26),
-            rgba(15, 23, 42, 0.96));
-    border: 1px solid rgba(148, 163, 184, 0.35);
-    box-shadow: 0 20px 32px rgba(0, 0, 0, 0.6);
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.1), 0 20px 32px rgba(0, 0, 0, 0.25);
+    animation: border-glow 4s infinite alternate ease-in-out;
     padding: 1.1rem 1.05rem 1rem;
     display: flex;
     justify-content: space-between;
@@ -52,7 +65,12 @@
     min-width: 150px;
 }
 
-/* Panels */
+/* 
+   =========================================================================
+   MAIN LAYOUT PANELS
+   =========================================================================
+   - Grid layout for different game categories (e.g., Active vs. Open).
+*/
 
 .gl-layout {
     display: grid;
@@ -62,11 +80,12 @@
 
 .gl-panel {
     border-radius: 18px;
-    background: radial-gradient(circle at top left,
-            rgba(30, 64, 175, 0.22),
-            rgba(15, 23, 42, 0.96));
-    border: 1px solid rgba(30, 64, 175, 0.45);
-    box-shadow: 0 18px 30px rgba(0, 0, 0, 0.55);
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.08), 0 18px 30px rgba(0, 0, 0, 0.25);
+    animation: border-glow 5s infinite alternate-reverse ease-in-out;
     padding: 0.95rem 0.95rem 0.9rem;
     font-size: 0.9rem;
 }
@@ -88,7 +107,10 @@
     opacity: 0.82;
 }
 
-/* Game list rows */
+/* 
+   Game List Items
+   - Individual rows representing a game session.
+*/
 
 .gl-game-list {
     list-style: none;
@@ -106,8 +128,8 @@
     gap: 0.8rem;
     padding: 0.55rem 0.55rem;
     border-radius: 13px;
-    background: rgba(15, 23, 42, 0.9);
-    border: 1px solid rgba(30, 64, 175, 0.5);
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(30, 64, 175, 0.2);
 }
 
 .gl-game-row-compact {
@@ -160,13 +182,15 @@
     padding-inline: 0.9rem;
 }
 
-/* === Delete button (idle state) === */
+/* 
+   Action Buttons (Delete)
+   - Pill-shaped button for removing games.
+*/
 .gl-delete-btn {
     background: transparent;
     color: #ff5c5c;
     border: 1px solid rgba(255, 92, 92, 0.85);
     border-radius: 999px;
-    /* pill shape */
     padding: 0.35rem 1.1rem;
     font-size: 0.78rem;
     font-weight: 500;
@@ -178,31 +202,30 @@
         border-color 0.18s ease;
 }
 
-/* === Delete button (hover state) === */
 .gl-delete-btn:hover {
     background: #1f2933;
-    /* dark filled background */
     color: #ffffff;
     border-color: rgba(255, 92, 92, 0.9);
     box-shadow: 0 0 0 1px rgba(255, 92, 92, 0.15),
         0 6px 16px rgba(0, 0, 0, 0.6);
 }
 
-/* === Optional: active press feel === */
 .gl-delete-btn:active {
     transform: translateY(1px);
 }
 
 
-/* Empty state */
-
+/* Empty State Message */
 .gl-empty {
     margin: 0.25rem 0 0;
     font-size: 0.86rem;
     opacity: 0.83;
 }
 
-/* Small status dot for "my games" */
+/* 
+   Status Indicators
+   - Colored dots to show game state.
+*/
 
 .gl-status-dot {
     width: 9px;
@@ -211,7 +234,6 @@
     margin-right: 0.35rem;
 }
 
-/* Colors per status */
 .gl-status-waiting {
     background: #facc15;
 }
@@ -224,7 +246,7 @@
     background: #f97373;
 }
 
-/* Responsive */
+/* Responsive Adjustments */
 
 @media (max-width: 900px) {
     .gl-header-card {
@@ -247,13 +269,12 @@
     margin: 0;
 }
 
-/* === Delete button (idle state) === */
+/* Repeated button styles for scope safety (if needed) */
 .gl-delete-btn {
     background: transparent;
     color: #ff5c5c;
     border: 1px solid rgba(255, 92, 92, 0.85);
     border-radius: 999px;
-    /* pill shape */
     padding: 0.35rem 1.1rem;
     font-size: 0.78rem;
     font-weight: 500;
@@ -265,17 +286,30 @@
         border-color 0.18s ease;
 }
 
-/* === Delete button (hover state) === */
 .gl-delete-btn:hover {
     background: #1f2933;
-    /* dark filled background */
     color: #ffffff;
     border-color: rgba(255, 92, 92, 0.9);
     box-shadow: 0 0 0 1px rgba(255, 92, 92, 0.15),
         0 6px 16px rgba(0, 0, 0, 0.6);
 }
 
-/* === Optional: active press feel === */
 .gl-delete-btn:active {
     transform: translateY(1px);
+}
+
+/* 
+   Animations
+   - Subtle pulsating glow for cards.
+*/
+@keyframes border-glow {
+    0% {
+        border-color: rgba(139, 92, 246, 0.2);
+        box-shadow: 0 0 5px rgba(139, 92, 246, 0.05), 0 15px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    100% {
+        border-color: rgba(139, 92, 246, 0.5);
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.2), 0 15px 30px rgba(0, 0, 0, 0.3);
+    }
 }

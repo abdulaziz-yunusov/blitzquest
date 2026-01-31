@@ -1,17 +1,43 @@
-/* FAQ Page Styles */
+/* =========================================================================
+   FAQ PAGE STYLESHEET
+   =========================================================================
+   Defines the styling for the Frequently Asked Questions (FAQ) page.
+   Features a dark gradient theme, accordion-style Q&A interactions,
+   and responsive layout adjustments.
+   ========================================================================= */
+
+/* 
+   Page Body
+   - Applies a deep linear gradient background (Dark Purple/Blue).
+   - Sets the global font family to 'Inter'.
+   - Ensures full viewport height.
+*/
 .faq-page-body {
-    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    background: linear-gradient(135deg, #0a0814 0%, #1a1530 50%, #14131f 100%);
     min-height: 100vh;
     font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
+/* 
+   Main Container
+   - Limits content width for readability (max 900px).
+   - Centers content horizontally.
+*/
 .faq-container {
     max-width: 900px;
     margin: 0 auto;
     padding: 40px 20px;
 }
 
-/* Header Section */
+/* =========================================================================
+   HEADER SECTION
+   ========================================================================= */
+
+/* 
+   Header Layout
+   - Flexbox layout for flexible alignment of Titles and Action Buttons.
+   - Adjusts spacing and wrappability.
+*/
 .faq-header {
     display: flex;
     justify-content: space-between;
@@ -25,6 +51,11 @@
     flex: 1;
 }
 
+/* 
+   Main Title
+   - Uses a background-clip gradient for the text itself (Teal to Pink).
+   - Large, bold typography.
+*/
 .faq-title {
     font-size: 3rem;
     font-weight: 800;
@@ -38,17 +69,24 @@
     gap: 15px;
 }
 
+/* Decorative Icon next to title */
 .faq-icon {
     font-size: 3rem;
     filter: drop-shadow(0 0 20px rgba(168, 237, 234, 0.5));
 }
 
+/* Subtitle / Description text */
 .faq-subtitle {
     font-size: 1.2rem;
     color: rgba(255, 255, 255, 0.7);
     margin: 0;
 }
 
+/* 
+   "Back to Home" Button
+   - Glassmorphism effect (semi-transparent + blur).
+   - White text/border with hover state.
+*/
 .faq-back-btn {
     padding: 12px 24px;
     background: rgba(255, 255, 255, 0.1);
@@ -70,6 +108,7 @@
     transform: translateX(-5px);
 }
 
+/* Animated arrow icon inside the button */
 .back-arrow {
     font-size: 1.5rem;
     transition: transform 0.3s ease;
@@ -79,18 +118,27 @@
     transform: translateX(-3px);
 }
 
-/* FAQ Content */
+/* =========================================================================
+   FAQ CONTENT (ACCORDION)
+   ========================================================================= */
+
 .faq-content {
     margin-bottom: 60px;
 }
 
+/* Accordion Wrapper */
 .faq-accordion {
     display: flex;
     flex-direction: column;
     gap: 16px;
 }
 
-/* FAQ Item */
+/* 
+   Individual FAQ Item
+   - Default state is collapsed.
+   - Distinct background and border.
+   - Smooth hover lift effect.
+*/
 .faq-item {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -107,12 +155,16 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
+/* Active State (Expanded) Highlights */
 .faq-item.active {
     background: rgba(168, 237, 234, 0.1);
     border-color: rgba(168, 237, 234, 0.3);
 }
 
-/* FAQ Question Button */
+/* 
+   Question Header (The clickable toggle)
+   - Flexbox for 'Question Text' + 'Toggle Icon'.
+*/
 .faq-question {
     width: 100%;
     padding: 24px 28px;
@@ -138,6 +190,7 @@
     flex: 1;
 }
 
+/* Plus/Cross Icon Animation */
 .faq-toggle-icon {
     font-size: 2rem;
     font-weight: 300;
@@ -147,11 +200,16 @@
     text-align: center;
 }
 
+/* Rotates the '+' icon 45deg to form an 'X' */
 .faq-item.active .faq-toggle-icon {
     transform: rotate(45deg);
 }
 
-/* FAQ Answer */
+/* 
+   Answer Expandable Area
+   - Uses max-height transition trick for smooth open/close animation.
+   - Default max-height: 0 (Hidden).
+*/
 .faq-answer {
     max-height: 0;
     overflow: hidden;
@@ -161,11 +219,13 @@
     line-height: 1.7;
 }
 
+/* Expanded state max-height and padding */
 .faq-item.active .faq-answer {
     max-height: 500px;
     padding: 0 28px 28px;
 }
 
+/* Typography inside answers */
 .faq-answer p {
     margin: 0 0 12px 0;
 }
@@ -189,7 +249,10 @@
     font-weight: 600;
 }
 
-/* CTA Section */
+/* =========================================================================
+   CALL TO ACTION (CTA) SECTION
+   ========================================================================= */
+
 .faq-cta {
     text-align: center;
     margin-top: 60px;
@@ -213,25 +276,34 @@
     margin: 0 0 25px 0;
 }
 
+/* 
+   CTA Button Styles
+   - Cyan/Magenta Gradient.
+   - Glow (box-shadow) effect on hover.
+*/
 .cta-button {
     display: inline-block;
     padding: 14px 32px;
-    background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%);
-    color: #1a1a2e;
+    background: linear-gradient(120deg, #00d4ff 0%, #ff00ff 100%);
+    color: #ffffff;
     font-weight: 700;
     font-size: 1.05rem;
     text-decoration: none;
     border-radius: 12px;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 20px rgba(168, 237, 234, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 212, 255, 0.5), 0 0 30px rgba(255, 0, 255, 0.3);
 }
 
 .cta-button:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 30px rgba(168, 237, 234, 0.6);
+    box-shadow: 0 8px 30px rgba(0, 212, 255, 0.7), 0 0 40px rgba(255, 0, 255, 0.5);
 }
 
-/* Responsive Design */
+/* =========================================================================
+   RESPONSIVE DESIGN
+   ========================================================================= */
+
+/* Tablet (Max 768px) */
 @media (max-width: 768px) {
     .faq-title {
         font-size: 2rem;
@@ -277,6 +349,7 @@
     }
 }
 
+/* Mobile (Max 480px) */
 @media (max-width: 480px) {
     .faq-container {
         padding: 20px 15px;
