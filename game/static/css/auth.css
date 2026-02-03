@@ -68,7 +68,8 @@ body.auth-body::before {
 /* 
    Glassmorphism Card Container
    - Semi-transparent dark background with blur (backdrop-filter).
-   - Subtle border and shadow for depth and separation from background.
+   - White border with smooth purple glow effect.
+   - Subtle shadow for depth and separation from background.
    - Serves as the main container for the form.
 */
 .auth-card {
@@ -78,14 +79,16 @@ body.auth-body::before {
     border-radius: 24px;
     background: rgba(16, 18, 27, 0.5);
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.6);
     box-shadow:
         0 20px 40px rgba(0, 0, 0, 0.6),
+        0 0 30px rgba(124, 58, 237, 0.5),
         inset 0 0 0 1px rgba(255, 255, 255, 0.05);
     position: relative;
     z-index: 2;
     display: flex;
     flex-direction: column;
+    animation: borderGlow 2s ease-in-out infinite;
 }
 
 /* 
@@ -170,6 +173,7 @@ body.auth-body::before {
 /* 
    Input Field Styling
    - Dark translucent background.
+   - White border.
    - Light text color.
    - Smooth transition for focus states.
    - Excludes checkboxes and radio buttons to preserve their native/custom styles.
@@ -179,7 +183,7 @@ body.auth-body::before {
     padding: 1.15rem 1.25rem;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1.5px solid rgba(255, 255, 255, 0.6);
     color: #ffffff;
     font-size: 1.05rem;
     transition: all 0.2s ease;
@@ -190,9 +194,10 @@ body.auth-body::before {
 /* Focus state: Highlights border and adds a glow ring */
 .form-row input:not([type="checkbox"]):not([type="radio"]):focus {
     outline: none;
-    border-color: #7c3aed;
+    border-color: rgba(255, 255, 255, 0.9);
+    border-width: 2px;
     background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
 }
 
 /* Placeholder text styling for subtle visibility */
@@ -370,5 +375,29 @@ button.btn-auth-submit:active {
 
     .auth-title {
         font-size: 1.75rem;
+    }
+}
+
+/* 
+   Keyframe Animation for Border Glow
+   - borderGlow: Subtle pulsing animation for the card border with white color
+*/
+@keyframes borderGlow {
+
+    0%,
+    100% {
+        border-color: rgba(255, 255, 255, 0.6);
+        box-shadow:
+            0 20px 40px rgba(0, 0, 0, 0.6),
+            0 0 30px rgba(124, 58, 237, 0.5),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    }
+
+    50% {
+        border-color: rgba(255, 255, 255, 0.8);
+        box-shadow:
+            0 20px 40px rgba(0, 0, 0, 0.6),
+            0 0 40px rgba(124, 58, 237, 0.7),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.05);
     }
 }

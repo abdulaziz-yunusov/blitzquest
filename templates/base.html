@@ -36,10 +36,14 @@
 
                 {# Navigation Links #}
                 <nav class="main-nav">
-                    <a href="{% url 'game:home' %}">Home</a>
-                    <a href="{% url 'game:game_list' %}">Games</a>
-                    <a href="{% url 'game:game_create' %}">Create</a>
-                    <a href="{% url 'game:game_join' %}">Join</a>
+                    <a href="{% url 'game:home' %}"
+                        class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Home</a>
+                    <a href="{% url 'game:game_list' %}"
+                        class="{% if request.resolver_match.url_name == 'game_list' %}active{% endif %}">Games</a>
+                    <a href="{% url 'game:game_create' %}"
+                        class="{% if request.resolver_match.url_name == 'game_create' %}active{% endif %}">Create</a>
+                    <a href="{% url 'game:game_join' %}"
+                        class="{% if request.resolver_match.url_name == 'game_join' %}active{% endif %}">Join</a>
                 </nav>
 
                 {# User Menu / Authentication Actions #}

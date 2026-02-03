@@ -202,7 +202,18 @@
     max-width: 18rem;
     text-align: right;
     opacity: 0.9;
+    margin-bottom: 0.8rem;
 }
+
+.game-btn-group {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 0.8rem;
+    justify-content: flex-end;
+}
+
 
 /* 
    =========================================================================

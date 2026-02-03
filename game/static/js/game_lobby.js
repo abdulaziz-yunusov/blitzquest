@@ -6,7 +6,11 @@
  * - Polls for player updates.
  * - Updates the player list and host controls.
  * - Toggles the "Start Game" button based on player count.
+ * - Dynamically shows/hides UI sections based on game status.
  */
+
+// Track the last known game status to detect changes
+let lastKnownStatus = null;
 
 function escapeHtml(str) {
     if (str === null || str === undefined) return "";
@@ -94,6 +98,44 @@ function updateLobbyPlayers(state) {
 }
 
 /**
+ * Updates the game status UI sections (waiting vs active states).
+ * @param {object} state - The game state.
+ */
+function updateGameStatusUI(state) {
+    if (!state) return;
+
+    const waitingState = document.getElementById("waiting-state");
+    const activeState = document.getElementById("active-state");
+    const gameStatusHint = document.getElementById("game-status-hint");
+    const endGameForm = document.getElementById("end-game-form");
+
+    // Toggle visibility of waiting vs active states
+    if (state.status === "waiting") {
+        if (waitingState) waitingState.style.display = "block";
+        if (activeState) activeState.style.display = "none";
+    } else if (state.status === "ordering" || state.status === "drafting" || state.status === "active") {
+        if (waitingState) waitingState.style.display = "none";
+        if (activeState) activeState.style.display = "block";
+
+        // Update hint text based on specific status
+        if (gameStatusHint) {
+            if (state.status === "ordering") {
+                gameStatusHint.textContent = "Rolling for turn order. Open the board to participate.";
+            } else if (state.status === "drafting") {
+                gameStatusHint.textContent = "Card drafting in progress.";
+            } else {
+                gameStatusHint.textContent = "Game in progress. Use the board view to play.";
+            }
+        }
+
+        // Show/hide end game button for host
+        if (endGameForm) {
+            endGameForm.style.display = state.status === "active" ? "inline" : "none";
+        }
+    }
+}
+
+/**
  * Fetch the latest lobby state from the server.
  * @param {string} gameId - The ID of the current game.
  */
@@ -105,11 +147,35 @@ async function fetchLobbyState(gameId) {
         if (!resp.ok) return;
         const data = await resp.json();
 
-        // Only update UI if game is in pre-game states
+        // Initialize lastKnownStatus on first poll
+        if (lastKnownStatus === null) {
+            lastKnownStatus = data.status;
+        }
+
+        // Detect status change from 'waiting' to active states
+        // When the host starts the game, reload the page to show the "Open Game Board" button
+        if (lastKnownStatus === "waiting" &&
+            (data.status === "ordering" || data.status === "drafting" || data.status === "active")) {
+            console.log("Game started! Showing game board button...");
+            updateGameStatusUI(data);
+        }
+
+        // Update lastKnownStatus for next poll
+        lastKnownStatus = data.status;
+
+        // Update player list for waiting and active states
         if (data.status === "waiting" || data.status === "active") {
             updateLobbyPlayers(data);
+        }
+
+        // Update start button visibility for host (only in waiting state)
+        if (data.status === "waiting") {
             updateLobbyStartUI(data);
         }
+
+        // Always update status UI to keep it in sync
+        updateGameStatusUI(data);
+
     } catch (e) {
         console.error("Lobby state error:", e);
     }

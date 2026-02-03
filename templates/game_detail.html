@@ -57,56 +57,62 @@
 
             <!-- Inside game_detail.html -> game-header-bottom -->
             <div class="game-actions">
-                {% if game.status == 'waiting' %}
-                <div class="game-code">
-                    <span class="game-code-label">Lobby code</span>
-                    <span class="game-code-value">{{ game.code }}</span>
-                </div>
-
-                <div class="game-btn-group">
-                    {% if is_host %}
-                    <div id="host-start-wrap">
-                        <form id="start-game-form" method="post" action="{% url 'game:game_start' game.id %}"
-                            style="display: {% if players.count >= 2 %}block{% else %}none{% endif %};">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-primary">Start game</button>
-                        </form>
-                        <div class="game-hint" id="host-wait-hint"
-                            style="display: {% if players.count >= 2 %}none{% else %}block{% endif %};">
-                            Waiting for <strong>2+</strong> players...
-                        </div>
+                <!-- Waiting State: Lobby Code and Start Button -->
+                <div id="waiting-state"
+                    style="display: {% if game.status == 'waiting' %}block{% else %}none{% endif %};">
+                    <div class="game-code">
+                        <span class="game-code-label">Lobby code</span>
+                        <span class="game-code-value">{{ game.code }}</span>
                     </div>
-                    {% endif %}
+
+                    <div class="game-btn-group">
+                        {% if is_host %}
+                        <div id="host-start-wrap">
+                            <form id="start-game-form" method="post" action="{% url 'game:game_start' game.id %}"
+                                style="display: {% if players.count >= 2 %}block{% else %}none{% endif %};">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary">Start game</button>
+                            </form>
+                            <div class="game-hint" id="host-wait-hint"
+                                style="display: {% if players.count >= 2 %}none{% else %}block{% endif %};">
+                                Waiting for <strong>2+</strong> players...
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
 
-                {% elif game.status == 'ordering' or game.status == 'active' or game.status == 'drafting' %}
-                <div class="game-hint">
-                    {% if game.status == 'ordering' %}
-                    Rolling for turn order. Open the board to participate.
-                    {% elif game.status == 'drafting' %}
-                    Card drafting in progress.
-                    {% else %}
-                    Game in progress. Use the board view to play.
-                    {% endif %}
+                <!-- Active State: Game Board Button -->
+                <div id="active-state"
+                    style="display: {% if game.status == 'ordering' or game.status == 'active' or game.status == 'drafting' %}block{% else %}none{% endif %};">
+                    <div class="game-hint" id="game-status-hint">
+                        {% if game.status == 'ordering' %}
+                        Rolling for turn order. Open the board to participate.
+                        {% elif game.status == 'drafting' %}
+                        Card drafting in progress.
+                        {% else %}
+                        Game in progress. Use the board view to play.
+                        {% endif %}
+                    </div>
+
+                    <div class="game-btn-group">
+                        {% if is_host %}
+                        <!-- End game only shows during active play -->
+                        <form id="end-game-form" method="post" action="{% url 'game:game_end' game.id %}"
+                            style="display:{% if game.status == 'active' %}inline{% else %}none{% endif %};">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-secondary">End game</button>
+                        </form>
+                        {% endif %}
+
+                        <a href="{% url 'game:game_board' game.id %}" class="btn btn-primary">
+                            Open game board
+                        </a>
+                    </div>
                 </div>
 
-                <div class="game-btn-group">
-                    <a href="{% url 'game:game_board' game.id %}" class="btn btn-primary">
-                        Open game board
-                    </a>
-
-                    {% if is_host %}
-                    <!-- End game only shows during active play -->
-                    {% if game.status == 'active' %}
-                    <form method="post" action="{% url 'game:game_end' game.id %}" style="display:inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-secondary">End game</button>
-                    </form>
-                    {% endif %}
-                    {% endif %}
-                </div>
-
-                {% elif game.status == 'finished' %}
+                <!-- Finished State -->
+                {% if game.status == 'finished' %}
                 <div class="game-hint">
                     Game finished. Winner: <strong>{{ game.winner.user.username|default:"N/A" }}</strong>
                 </div>

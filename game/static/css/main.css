@@ -216,12 +216,18 @@ body.home-body .bg-blur {
 .main-nav a {
   padding: 0.25rem 0.4rem;
   border-radius: 999px;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.18s ease, border-bottom-color 0.18s ease;
+  border-bottom: 2px solid transparent;
 }
 
 .main-nav a:hover {
   opacity: 1;
   text-decoration: none;
+}
+
+.main-nav a.active {
+  opacity: 1;
+  border-bottom-color: #8b5cf6;
 }
 
 .user-nav {
