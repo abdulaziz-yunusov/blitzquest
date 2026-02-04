@@ -155,11 +155,16 @@ function updatePlayersUI(state) {
         .map((p) => {
             // const isHost = (hostUserId !== null && p.user_id === hostUserId);
             const isYou = p.is_you || (youPlayerId && p.id === youPlayerId);
+            const isTurn = p.is_current_turn; // Check if this player has current turn
 
-            // Build role tags (compact)
+            // Build role tags (compact) - separated logic
             let roleTag = "";
             if (isYou) {
-                roleTag = '<span class="compact-role you-tag">You</span>';
+                roleTag += '<span class="compact-role you-tag">You</span>';
+            }
+            // Show Turn badge only if this player has the turn (not mixed with You)
+            if (isTurn) {
+                roleTag += '<span class="compact-role turn-tag">Turn</span>';
             }
 
             // Determine which stats to show based on game mode
