@@ -471,7 +471,7 @@
 <script>
   window.GAME_ID = {{ game.id|default:"null" }};
   window.GAME_HOST_USER_ID = {{ game.host_id|default:"null" }};
-  window.GAME_MAX_PLAYERS = {{ game.max_players|default:4 }};
+  window.GAME_MAX_PLAYERS = {{ game.max_players|default:"4" }};
 </script>
 <script>
   window.BQ_LOBBY_URL = "{% url 'game:game_detail' game.id %}";
