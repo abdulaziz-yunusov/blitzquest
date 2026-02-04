@@ -253,16 +253,29 @@ body.profile-v3-body .bg-blur {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: transform 0.2s, opacity 0.2s;
 }
 
 .v3-photo-circle:hover {
     transform: scale(1.05);
 }
 
+.v3-photo-circle.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .v3-camera-icon {
     font-size: 1.5rem;
     color: #000000;
+}
+
+.v3-upload-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 .v3-file-input {

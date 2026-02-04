@@ -63,9 +63,15 @@
 
                         {# Profile Picture Upload #}
                         <div class="v3-upload-section">
-                            <label for="id_profile_picture" class="v3-photo-circle">
+                            <label for="id_profile_picture" class="v3-photo-circle disabled">
+                                {% if user.profile.profile_picture %}
+                                <img src="{{ user.profile.profile_picture.url }}" alt="Current Profile"
+                                    class="v3-upload-preview" id="uploadPreview">
+                                {% else %}
                                 <span class="v3-camera-icon">📷</span>
-                                <input type="file" name="profile_picture" id="id_profile_picture" class="v3-file-input">
+                                {% endif %}
+                                <input type="file" name="profile_picture" id="id_profile_picture" class="v3-file-input"
+                                    accept="image/*" disabled>
                             </label>
                             <span class="v3-upload-text">Upload Photo</span>
                         </div>
@@ -112,7 +118,8 @@
                                 <p class="v3-history-title">{{ item.game.get_mode_display }}</p>
                                 <div class="v3-history-meta">
                                     <span class="v3-meta-id"><span class="v3-icon">🔑</span> {{ item.game.code }}</span>
-                                    <span class="v3-meta-date"><span class="v3-icon">📅</span> {{ item.created_at|date:"d F Y | h:i A" }}</span>
+                                    <span class="v3-meta-date"><span class="v3-icon">📅</span> {{
+                                        item.created_at|date:"d F Y | h:i A" }}</span>
                                 </div>
                             </div>
                             <div class="v3-history-time">
@@ -138,12 +145,36 @@
     document.getElementById('id_profile_picture').onchange = function (evt) {
         const [file] = this.files;
         if (file) {
-            const preview = document.querySelector('.v3-avatar-img') || document.createElement('img');
+            const photoCircle = document.querySelector('.v3-photo-circle');
+            const existingPreview = document.getElementById('uploadPreview');
+            const cameraIcon = document.querySelector('.v3-camera-icon');
+
+            // Create or update preview image
+            let preview = existingPreview || document.createElement('img');
             preview.src = URL.createObjectURL(file);
-            preview.classList.add('v3-avatar-img');
-            if (!document.querySelector('.v3-avatar-img')) {
-                document.querySelector('.profile-v3-avatar-circle').innerHTML = '';
-                document.querySelector('.profile-v3-avatar-circle').appendChild(preview);
+            preview.id = 'uploadPreview';
+            preview.classList.add('v3-upload-preview');
+
+            // Remove camera icon if it exists
+            if (cameraIcon) {
+                cameraIcon.remove();
+            }
+
+            // Add preview if it doesn't exist
+            if (!existingPreview) {
+                photoCircle.insertBefore(preview, photoCircle.firstChild);
+            }
+
+            // Also update sidebar avatar
+            const sidebarAvatar = document.querySelector('.profile-v3-avatar-circle');
+            if (sidebarAvatar) {
+                const sidebarImg = sidebarAvatar.querySelector('.v3-avatar-img') || document.createElement('img');
+                sidebarImg.src = URL.createObjectURL(file);
+                sidebarImg.classList.add('v3-avatar-img');
+                if (!sidebarAvatar.querySelector('.v3-avatar-img')) {
+                    sidebarAvatar.innerHTML = '';
+                    sidebarAvatar.appendChild(sidebarImg);
+                }
             }
         }
     }
@@ -164,6 +195,12 @@
 
         // Enable the Save Info button
         saveInfoBtn.disabled = false;
+
+        // Enable the profile picture upload
+        const fileInput = document.getElementById('id_profile_picture');
+        const photoCircle = document.querySelector('.v3-photo-circle');
+        fileInput.disabled = false;
+        photoCircle.classList.remove('disabled');
 
         // Visual feedback
         changeInfoBtn.style.opacity = '0.6';

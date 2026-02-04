@@ -52,7 +52,12 @@
                     <div class="user-menu-container">
                         <button class="user-menu-trigger" aria-label="Open user menu">
                             <div class="user-avatar">
+                                {% if user.profile.profile_picture %}
+                                <img src="{{ user.profile.profile_picture.url }}" alt="{{ user.username }}"
+                                    class="user-avatar-img">
+                                {% else %}
                                 {{ user.username|make_list|first|upper }}
+                                {% endif %}
                             </div>
                             <div class="user-info">
                                 <span class="user-name">{{ user.username }}</span>
