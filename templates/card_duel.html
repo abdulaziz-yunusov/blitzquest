@@ -194,9 +194,9 @@
 {% block extra_js %}
 <script>
     // Game configuration for client-side scripts
-    window.GAME_ID = {{ game.id | safe }};
-    window.GAME_HOST_USER_ID = {{ game.host_id |default: "null" | safe }};
-    window.GAME_MAX_PLAYERS = {{ game.max_players | safe }};
+    window.GAME_ID = {{ game.id|safe }};
+    window.GAME_HOST_USER_ID = {{ game.host_id|default:"null"|safe }};
+    window.GAME_MAX_PLAYERS = {{ game.max_players|safe }};
     window.STATIC_URL = "{% static '' %}";
     window.CD_BACK_URL = "{% static 'images/CardDuelCards/back.png' %}";
 </script>
