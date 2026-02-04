@@ -87,8 +87,9 @@
         difficulty: Easy, Normal, or Hard.</li>
       <li><strong>Draft Mode</strong>: Strategic card selection! Draft 3 support cards before the game begins, then race
         to the finish.</li>
-      <li><strong>Card Duel</strong>: Pure strategy! Build your deck, play attack and bonus cards, and eliminate
-        opponents in turn-based combat.</li>
+      <li><strong>Card Duel</strong>: Pure strategy! 1v1 battle where you build your deck, play attack and bonus cards,
+        and eliminate
+        your opponent in turn-based combat. (2 players only)</li>
     </ul>
     <p class="gc-side-note">
       Each mode features unique mechanics, tile effects, and strategic depth. Roll dice, answer questions, use support
@@ -165,10 +166,13 @@
       const mode = modeSel ? modeSel.value : "finish";
       const isFinish = (mode === "finish");
       const isSurvival = (mode === "survival");
+      const isCardDuel = (mode === "card_duel");
 
       // Show/hide mode-specific fields
       if (diffField) diffField.style.display = isSurvival ? "" : "none";
       if (boardLenField) boardLenField.style.display = isFinish ? "" : "none";
+
+      // Show max_players only for Custom Game mode
       if (maxPlayersField) maxPlayersField.style.display = isFinish ? "" : "none";
 
       if (enabledTilesBlock) enabledTilesBlock.style.display = isFinish ? "" : "none";
@@ -184,6 +188,11 @@
         } else if (currentValue < 2) {
           maxPlayersInput.value = "2";
         }
+      }
+
+      // Card Duel mode: force max_players to 2
+      if (maxPlayersInput && isCardDuel) {
+        maxPlayersInput.value = "2";
       }
 
       if (isFinish) updateTilesSummary();

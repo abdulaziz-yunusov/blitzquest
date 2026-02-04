@@ -2531,36 +2531,6 @@ body.modal-open {
   color: rgba(255, 255, 255, 0.8);
 }
 
-.chat-row .chat-text {
-  margin: 0;
-  max-width: 85%;
-  padding: 8px 12px;
-  border-radius: 12px 18px 18px 12px;
-  line-height: 1.4;
-  font-size: 13px;
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  background: #1e293b;
-  color: #f1f5f9;
-  position: relative;
-  word-break: break-word;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-/* Message tail for others */
-.chat-row:not(.you) .chat-text::after {
-  content: "";
-  position: absolute;
-  left: -6px;
-  bottom: 8px;
-  width: 10px;
-  height: 10px;
-  background: #1e293b;
-  border-left: 1px solid rgba(148, 163, 184, .16);
-  border-bottom: 1px solid rgba(148, 163, 184, .16);
-  transform: rotate(45deg);
-  border-bottom-left-radius: 3px;
-}
-
 .chat-row.you {
   justify-content: flex-end;
 }
@@ -2571,29 +2541,6 @@ body.modal-open {
   height: 0;
   border: 0;
   margin: 0;
-}
-
-.chat-row.you .chat-text {
-  border-radius: 18px 12px 12px 18px;
-  background: linear-gradient(135deg, rgba(140, 70, 255, .92), rgba(88, 70, 255, .92));
-  border-color: rgba(167, 139, 250, .35);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
-}
-
-/* Message tail for user */
-.chat-row.you .chat-text::after {
-  content: "";
-  position: absolute;
-  right: -6px;
-  bottom: 8px;
-  width: 10px;
-  height: 10px;
-  background: rgba(110, 70, 255, .92);
-  border-right: 1px solid rgba(167, 139, 250, .35);
-  border-top: 1px solid rgba(167, 139, 250, .20);
-  transform: rotate(45deg);
-  border-top-right-radius: 3px;
 }
 
 /* Chat Input Area */
