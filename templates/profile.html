@@ -41,7 +41,7 @@
                 <span class="v3-btn-arrow">‹</span>
             </a>
             <a href="{% url 'game:faq' %}" class="v3-nav-btn btn-ghost">
-                <span class="v3-btn-icon">🧩</span>
+                <span class="v3-btn-icon">❓</span>
                 Faq
                 <span class="v3-btn-arrow">‹</span>
             </a>
@@ -112,8 +112,7 @@
                                 <p class="v3-history-title">{{ item.game.get_mode_display }}</p>
                                 <div class="v3-history-meta">
                                     <span class="v3-meta-id"><span class="v3-icon">🔑</span> {{ item.game.code }}</span>
-                                    <span class="v3-meta-date"><span class="v3-icon">📅</span> {{
-                                        item.created_at|date:"d F Y | h:i A" }}</span>
+                                    <span class="v3-meta-date"><span class="v3-icon">📅</span> {{ item.created_at|date:"d F Y | h:i A" }}</span>
                                 </div>
                             </div>
                             <div class="v3-history-time">
