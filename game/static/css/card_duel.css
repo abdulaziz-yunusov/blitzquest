@@ -446,3 +446,157 @@
   line-height: 1.2;
   overflow: visible;
 }
+
+/* =========================================================================
+   CARD DUEL MOBILE ENHANCEMENTS
+   =========================================================================
+   Additional responsive optimizations specific to Card Duel mode
+   ========================================================================= */
+
+/* Tablet: Better card sizing */
+@media (max-width: 1024px) {
+  .board-layout {
+    grid-template-columns: 300px 1fr !important;
+  }
+
+  #card-duel-root.card-duel-board {
+    max-width: 100%;
+  }
+
+  #card-duel-root .cd-play-slot {
+    width: 155px;
+    height: 230px;
+  }
+
+  #card-duel-root .cd-card {
+    width: 140px;
+  }
+}
+
+/* Mobile: Stack sidebar */
+@media (max-width: 768px) {
+  .board-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .board-inventory {
+    order: 3;
+  }
+
+  .board-main {
+    order: 1;
+  }
+
+  #card-duel-root .cd-topbar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  #card-duel-root .cd-pile {
+    gap: 14px;
+  }
+
+  #card-duel-root .cd-play-slot {
+    width: 135px;
+    height: 200px;
+  }
+
+  #card-duel-root .cd-card {
+    width: 125px;
+  }
+
+  #cd-endturn-btn {
+    width: 100%;
+    padding: 10px 16px;
+  }
+}
+
+/* Small Mobile: Very compact cards */
+@media (max-width: 480px) {
+  #card-duel-root .cd-pile {
+    gap: 10px;
+  }
+
+  #card-duel-root .cd-play-slot {
+    width: 120px;
+    height: 180px;
+  }
+
+  #card-duel-root .cd-card {
+    width: 110px;
+  }
+
+  #card-duel-root #cd-hand .cd-card {
+    margin-left: -90px;
+  }
+
+  #card-duel-root #cd-opp-hand-cards .cd-card {
+    margin-left: -90px;
+  }
+
+  #card-duel-root .cd-card--played .cd-card-title {
+    font-size: 0.75rem;
+    padding: 6px 8px;
+  }
+}
+
+/* Ultra Small: Maximum density (320px phones) */
+@media (max-width: 380px) {
+  #card-duel-root .cd-pile {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #card-duel-root .cd-play-slot {
+    width: 140px;
+    height: 200px;
+  }
+
+  #card-duel-root .cd-card {
+    width: 100px;
+  }
+
+  #card-duel-root #cd-hand .cd-card {
+    margin-left: -80px;
+  }
+
+  #card-duel-root #cd-opp-hand-cards .cd-card {
+    margin-left: -80px;
+  }
+}
+
+/* Portrait Mode: Stack cards vertically */
+@media (max-width: 768px) and (orientation: portrait) {
+  #card-duel-root .duel-battlefield {
+    padding: 12px 8px;
+  }
+
+  #card-duel-root .cd-centertext {
+    order: 2;
+    margin-top: 10px;
+  }
+
+  #card-duel-root #cd-turn-hint {
+    font-size: 0.85rem;
+  }
+}
+
+/* Landscape Mode: Optimize horizontal space */
+@media (max-width: 768px) and (orientation: landscape) {
+  .board-layout {
+    grid-template-columns: 240px 1fr !important;
+  }
+
+  #card-duel-root .cd-pile {
+    flex-direction: row;
+  }
+
+  #card-duel-root .cd-play-slot {
+    width: 110px;
+    height: 160px;
+  }
+
+  #card-duel-root .cd-card {
+    width: 100px;
+  }
+}

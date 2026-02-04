@@ -2787,3 +2787,1133 @@ body.modal-open {
   font-size: 12px;
   opacity: .7;
 }
+
+/* =========================================================================
+   MOBILE RESPONSIVE DESIGN
+   =========================================================================
+   Comprehensive mobile optimization for all game board modes.
+   Breakpoints: 1024px (tablet), 768px (mobile), 480px (small mobile)
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   TABLET LAYOUT (1024px and below)
+   ------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+
+  /* Stack layout: sidebar on top, board in middle, right sidebar at bottom */
+  .board-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 16px;
+  }
+
+  /* Reorder elements for better mobile UX */
+  .board-inventory {
+    order: 1;
+  }
+
+  .board-main-wrap {
+    order: 2;
+  }
+
+  .board-sidebar {
+    order: 3;
+  }
+
+  /* Optimize header for tablet */
+  .board-header {
+    flex-direction: column;
+    gap: 12px;
+    padding: 1rem;
+  }
+
+  .board-header-left,
+  .board-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Reduce tile sizes */
+  .board-tiles-ring {
+    grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+    grid-auto-rows: 64px;
+    gap: 6px;
+  }
+
+  /* Smaller dice */
+  .bq-die-list {
+    width: 60px;
+    height: 60px;
+  }
+
+  .bq-die-item {
+    padding: 8px;
+  }
+
+  .bq-dot {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   MOBILE LAYOUT (768px and below)
+   ------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+
+  /* Compact header */
+  .board-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .board-title {
+    font-size: 1rem;
+  }
+
+  .board-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .game-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+  }
+
+  /* Board tiles - smaller for mobile */
+  .board-tiles-ring {
+    grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+    grid-auto-rows: 56px;
+    gap: 5px;
+  }
+
+  .board-tile {
+    border-radius: 10px;
+    padding: 4px;
+  }
+
+  .board-tile-symbol,
+  .board-tile-label {
+    font-size: 1rem;
+  }
+
+  .board-tile-index {
+    font-size: 0.65rem;
+    top: 4px;
+    right: 5px;
+    padding: 1px 4px;
+  }
+
+  /* Player tokens - smaller */
+  .player-token {
+    width: 1.3rem;
+    height: 1.3rem;
+    font-size: 0.7rem;
+  }
+
+  /* Sidebar sections - more compact */
+  .sidebar-section {
+    padding: 0.6rem 0.85rem;
+  }
+
+  .sidebar-section h3 {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Legend - vertical stacking */
+  .board-legend {
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  .legend-item {
+    font-size: 0.7rem;
+  }
+
+  /* Chat - optimize for mobile */
+  .ig-chat-body {
+    max-height: 200px;
+  }
+
+  .ig-chat-input {
+    font-size: 0.9rem;
+    padding: 8px 10px;
+  }
+
+  /* Modals - full screen on mobile */
+  .bq-modal {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .bq-modal-card {
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .qmodal-card,
+  .smodal-card,
+  .dmodal-card {
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  /* Gun modal - optimize for touch */
+  .gun-card {
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .gun-target-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gun-target {
+    padding: 14px 12px;
+  }
+
+  /* Shop modal - single column */
+  .sgrid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .soffers {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Dice display */
+  .bq-die-list {
+    width: 56px;
+    height: 56px;
+  }
+
+  .bq-die-item {
+    padding: 7px;
+  }
+
+  .bq-dot {
+    width: 7px;
+    height: 7px;
+  }
+
+  /* Touch-friendly buttons - minimum 44px */
+  .btn,
+  button {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  .btn-sm {
+    min-height: 38px;
+    padding: 8px 12px;
+  }
+
+  /* Player list - compact */
+  .rank-row {
+    padding: 8px;
+  }
+
+  .rank-badge {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+  }
+
+  .rank-name {
+    font-size: 0.85rem;
+  }
+
+  /* Player status cards */
+  .ps-item {
+    padding: 12px;
+  }
+
+  .ps-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .ps-right {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* -------------------------------------------------------------------------
+   SMALL MOBILE (480px and below)
+   ------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+
+  /* Very compact header */
+  .board-header {
+    padding: 0.65rem 0.85rem;
+  }
+
+  .board-title {
+    font-size: 0.95rem;
+  }
+
+  .board-subtitle {
+    font-size: 0.7rem;
+  }
+
+  .game-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+
+  /* Maximum density for tiles */
+  .board-tiles-ring {
+    grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+    grid-auto-rows: 50px;
+    gap: 4px;
+  }
+
+  .board-tile-symbol {
+    font-size: 0.9rem;
+  }
+
+  .board-tile-index {
+    font-size: 0.6rem;
+    padding: 1px 3px;
+  }
+
+  /* Tiny tokens */
+  .player-token {
+    width: 1.1rem;
+    height: 1.1rem;
+    font-size: 0.6rem;
+  }
+
+  /* Sidebar */
+  .sidebar-section {
+    padding: 0.5rem 0.7rem;
+  }
+
+  .sidebar-section h3 {
+    font-size: 0.85rem;
+  }
+
+  /* Inventory cards */
+  .inv-card {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .inv-card-title {
+    font-size: 0.85rem;
+  }
+
+  .inv-card-desc {
+    font-size: 0.72rem;
+  }
+
+  /* Chat */
+  .ig-chat-body {
+    max-height: 150px;
+  }
+
+  .ig-chat-input {
+    font-size: 0.85rem;
+    padding: 7px 9px;
+  }
+
+  /* Very small dice */
+  .bq-die-list {
+    width: 48px;
+    height: 48px;
+  }
+
+  .bq-die-item {
+    padding: 6px;
+  }
+
+  .bq-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  /* Full-width buttons on very small screens */
+  #roll-button {
+    width: 100%;
+  }
+
+  /* Player status - single column stats */
+  .ps-right {
+    grid-template-columns: 1fr;
+  }
+
+  .rank-badge {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+
+  /* Modal tables - smaller text */
+  .bq-table th,
+  .bq-table td {
+    padding: 8px 6px;
+    font-size: 0.8rem;
+  }
+
+  /* Question modal choices */
+  .qchoices {
+    grid-template-columns: 1fr !important;
+  }
+
+  .qchoice {
+    padding: 12px !important;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   LANDSCAPE MODE OPTIMIZATION (for phones in landscape)
+   ------------------------------------------------------------------------- */
+@media (max-width: 768px) and (orientation: landscape) {
+
+  /* Chat - reduce height in landscape */
+  .ig-chat-body {
+    max-height: 120px;
+  }
+
+  /* Modals - less height */
+  .bq-modal-card,
+  .qmodal-card,
+  .smodal-card,
+  .dmodal-card,
+  .gun-card {
+    max-height: 85vh;
+  }
+
+  /* Board - optimize for wide but short screen */
+  .board-tiles-ring {
+    grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+    grid-auto-rows: 48px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   PRINT STYLES (bonus: game state printout)
+   ------------------------------------------------------------------------- */
+@media print {
+
+  .board-header-right,
+  .ig-chat,
+  #roll-button,
+  .btn {
+    display: none !important;
+  }
+
+  .board-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .board-tiles-ring {
+    page-break-inside: avoid;
+  }
+}
+
+/* =========================================================================
+   PREMIUM MOBILE UX ENHANCEMENTS
+   =========================================================================
+   Advanced features for exceptional mobile experience
+   ========================================================================= */
+
+/* Smooth scrolling for all devices */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better touch response - remove tap highlight */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Improved button touch feedback */
+@media (max-width: 768px) {
+
+  button,
+  .btn,
+  a.btn {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  button:active,
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  /* Ripple effect on touch */
+  button::after,
+  .btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
+  }
+
+  button:active::after,
+  .btn:active::after {
+    width: 300px;
+    height: 300px;
+  }
+}
+
+/* Enhanced tile interactions on mobile */
+@media (max-width: 768px) {
+  .board-tile {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .board-tile:active {
+    transform: scale(0.95);
+    filter: brightness(1.1);
+  }
+
+  /* Pulse animation for current tile */
+  .board-tile-current {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+
+    0%,
+    100% {
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.85),
+        0 8px 30px rgba(56, 189, 248, 0.14);
+    }
+
+    50% {
+      box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.6),
+        0 12px 40px rgba(56, 189, 248, 0.25);
+    }
+  }
+}
+
+/* Improved modal animations */
+@media (max-width: 768px) {
+
+  .bq-modal,
+  .qmodal,
+  .smodal,
+  .dmodal,
+  .gun-modal {
+    animation: fadeIn 0.3s ease;
+  }
+
+  .bq-modal-card,
+  .qmodal-card,
+  .smodal-card,
+  .dmodal-card,
+  .gun-card {
+    animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+}
+
+/* Better focus states for accessibility */
+@media (max-width: 768px) {
+
+  button:focus-visible,
+  input:focus-visible,
+  .btn:focus-visible {
+    outline: 3px solid rgba(96, 165, 250, 0.6);
+    outline-offset: 2px;
+  }
+}
+
+/* Enhanced inventory cards with depth */
+@media (max-width: 768px) {
+  .inv-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .inv-card:active {
+    transform: translateY(2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Improved chat UX */
+@media (max-width: 768px) {
+  .ig-chat {
+    border-radius: 16px 16px 0 0;
+  }
+
+  .ig-chat-body {
+    scroll-behavior: smooth;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* iOS momentum scrolling */
+  }
+
+  .ig-chat-input:focus {
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+  }
+}
+
+/* Premium glassmorphism for sidebars */
+@media (max-width: 768px) {
+  .sidebar-section {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    background: rgba(2, 6, 23, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Improved dice animation */
+@media (max-width: 768px) {
+  .bq-die-list {
+    will-change: transform;
+  }
+
+  /* Shake animation on roll */
+  @keyframes diceShake {
+
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+
+    25% {
+      transform: rotate(-5deg);
+    }
+
+    75% {
+      transform: rotate(5deg);
+    }
+  }
+
+  .bq-die-list[data-rolling="true"] {
+    animation: diceShake 0.5s ease-in-out;
+  }
+}
+
+/* Enhanced player tokens */
+@media (max-width: 768px) {
+  .player-token {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Bounce effect when token moves */
+  @keyframes tokenBounce {
+
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  .player-token-moving {
+    animation: tokenBounce 0.6s ease;
+  }
+}
+
+/* Better loading states */
+@media (max-width: 768px) {
+  .loading {
+    position: relative;
+  }
+
+  .loading::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0) 100%);
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}
+
+/* Improved legend visibility */
+@media (max-width: 768px) {
+  .board-legend {
+    background: rgba(2, 6, 23, 0.7);
+    backdrop-filter: blur(10px);
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .legend-item {
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    transition: background 0.2s ease;
+  }
+
+  .legend-item:active {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Enhanced rank badges */
+@media (max-width: 768px) {
+  .rank-badge {
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 0 20px rgba(251, 191, 36, 0.3);
+    transition: transform 0.2s ease;
+  }
+
+  .rank-row:active .rank-badge {
+    transform: scale(1.05);
+  }
+}
+
+/* Better modal close buttons */
+@media (max-width: 768px) {
+
+  .bq-modal-close,
+  .qhead-btn,
+  .gun-x {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Improved form inputs */
+@media (max-width: 768px) {
+
+  input[type="text"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important;
+    /* Prevents zoom on iOS */
+    border-radius: 10px;
+  }
+}
+
+/* Pull-to-refresh indicator (visual only) */
+@media (max-width: 768px) {
+  .board-page {
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* Enhanced activity log */
+@media (max-width: 768px) {
+  .dice-log {
+    scroll-behavior: smooth;
+    padding-right: 4px;
+  }
+
+  /* Custom scrollbar for webkit browsers */
+  .dice-log::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .dice-log::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+  }
+
+  .dice-log::-webkit-scrollbar-thumb {
+    background: rgba(96, 165, 250, 0.5);
+    border-radius: 2px;
+  }
+
+  .dice-log::-webkit-scrollbar-thumb:hover {
+    background: rgba(96, 165, 250, 0.7);
+  }
+}
+
+/* Skeleton loading for player status */
+@media (max-width: 768px) {
+  .ps-item.loading {
+    background: linear-gradient(90deg,
+        rgba(2, 6, 23, 0.7) 25%,
+        rgba(2, 6, 23, 0.5) 50%,
+        rgba(2, 6, 23, 0.7) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+}
+
+/* Better inventory visual feedback */
+@media (max-width: 768px) {
+  .inv-use-btn:active {
+    transform: scale(0.96);
+  }
+
+  .inv-use-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* Improved choice buttons in modals */
+@media (max-width: 768px) {
+  .qchoice {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .qchoice:active {
+    transform: scale(0.98);
+  }
+
+  .qchoice::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent);
+    transition: left 0.5s;
+  }
+
+  .qchoice:hover::before {
+    left: 100%;
+  }
+}
+
+/* Toast notifications style (if added in future) */
+@media (max-width: 768px) {
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    z-index: 10000;
+    animation: toastSlideUp 0.3s ease;
+    backdrop-filter: blur(10px);
+  }
+
+  @keyframes toastSlideUp {
+    from {
+      transform: translateX(-50%) translateY(100px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  }
+}
+
+/* Improved error states */
+@media (max-width: 768px) {
+  .error-message {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: #fecaca;
+    font-size: 0.9rem;
+    margin: 10px 0;
+    animation: shake 0.5s;
+  }
+
+  @keyframes shake {
+
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    25% {
+      transform: translateX(-10px);
+    }
+
+    75% {
+      transform: translateX(10px);
+    }
+  }
+}
+
+/* Performance optimization for animations */
+@media (max-width: 768px) {
+
+  .board-tile,
+  .player-token,
+  button,
+  .btn,
+  .inv-card,
+  .rank-badge {
+    will-change: transform;
+  }
+
+  /* Remove will-change after animation completes to save memory */
+  .board-tile:not(:active):not(:hover),
+  .player-token:not(.player-token-moving) {
+    will-change: auto;
+  }
+}
+
+/* =========================================================================
+   TURN & DICE MOBILE OPTIMIZATION
+   =========================================================================
+   Specific improvements for the dice roll section on mobile
+   ========================================================================= */
+
+@media (max-width: 768px) {
+
+  /* Turn & Dice Section Header */
+  .sidebar-section h3 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  /* Current Turn Label - Handle long names */
+  .current-turn-label {
+    font-size: 0.8rem;
+    line-height: 1.3;
+    margin-bottom: 8px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    max-width: 100%;
+  }
+
+  /* Dice Display Container */
+  .dice-display-wrapper {
+    gap: 8px;
+  }
+
+  .dice-display {
+    padding: 10px 12px;
+    background: rgba(2, 6, 23, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 12px;
+  }
+
+  /* Dice Text */
+  .dice-text {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.9);
+    text-align: center;
+    padding: 4px 0;
+  }
+
+  /* Roll Dice Button */
+  #roll-button {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  #roll-button:hover {
+    background: linear-gradient(135deg, #4f46e5, #4338ca);
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+    transform: translateY(-1px);
+  }
+
+  #roll-button:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  }
+
+  #roll-button:disabled {
+    background: rgba(100, 116, 139, 0.5);
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  /* Dice cube sizing for mobile */
+  .bq-dice {
+    perspective: 600px;
+  }
+
+  .bq-die-list {
+    width: 56px;
+    height: 56px;
+  }
+
+  .bq-die-item {
+    padding: 7px;
+  }
+
+  .bq-dot {
+    width: 7px;
+    height: 7px;
+  }
+}
+
+/* Small mobile specific adjustments */
+@media (max-width: 480px) {
+  .current-turn-label {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+
+  .dice-display {
+    padding: 8px 10px;
+  }
+
+  .dice-text {
+    font-size: 0.8rem;
+  }
+
+  #roll-button {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
+
+  .bq-die-list {
+    width: 48px;
+    height: 48px;
+  }
+
+  .bq-die-item {
+    padding: 6px;
+  }
+
+  .bq-dot {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+/* Enhanced dice rolling animation for mobile */
+@media (max-width: 768px) {
+  @keyframes mobileRoll {
+    0% {
+      transform: rotateX(0) rotateY(0);
+    }
+
+    25% {
+      transform: rotateX(180deg) rotateY(180deg);
+    }
+
+    50% {
+      transform: rotateX(360deg) rotateY(360deg);
+    }
+
+    75% {
+      transform: rotateX(540deg) rotateY(180deg);
+    }
+
+    100% {
+      transform: rotateX(720deg) rotateY(720deg);
+    }
+  }
+
+  .bq-die-list.rolling {
+    animation: mobileRoll 1s ease-out;
+  }
+
+  /* Add subtle pulse to roll button */
+  @keyframes buttonPulse {
+
+    0%,
+    100% {
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    50% {
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5);
+    }
+  }
+
+  #roll-button:not(:disabled) {
+    animation: buttonPulse 2s ease-in-out infinite;
+  }
+}
+
+/* Better text truncation for very long names */
+@media (max-width: 768px) {
+  .current-turn-label {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Improved visual hierarchy */
+@media (max-width: 768px) {
+  .sidebar-section {
+    padding: 12px 14px;
+  }
+
+  .sidebar-section:has(#roll-button) {
+    background: linear-gradient(135deg,
+        rgba(2, 6, 23, 0.6),
+        rgba(15, 23, 42, 0.6));
+    border: 1px solid rgba(99, 102, 241, 0.15);
+  }
+}
