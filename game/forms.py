@@ -63,8 +63,13 @@ class GameCreateForm(forms.ModelForm):
         mode = self.cleaned_data.get("mode") or Game.Mode.FINISH
         max_players = int(self.cleaned_data.get("max_players") or 4)
         
+        # Card Duel mode: enforce exactly 2 players
+        if mode == Game.Mode.CARD_DUEL:
+            if max_players != 2:
+                max_players = 2  # Force to 2 players
+        
         # Custom game mode: enforce 2-4 players
-        if mode == Game.Mode.FINISH:
+        elif mode == Game.Mode.FINISH:
             if max_players < 2:
                 raise forms.ValidationError("Custom game mode requires at least 2 players.")
             if max_players > 4:

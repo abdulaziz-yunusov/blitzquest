@@ -2468,34 +2468,56 @@ def _cd_image_filename(card_name: str) -> str:
     """
     name = (card_name or "").strip()
     
-    # Explicit mapping based on your file structure screenshot
+    # Mapping of card names to their image files based on FUNCTION/EFFECT
+    # Each card is mapped to an image that represents what it DOES
     mapping = {
-        "Heal": "RestoreHp.png",
-        "Shield Up": "IronSkin.png", # Assumed mapping
-        "Regen": "RegenBrew.png",
-        "Focus": "BattleFocus.png",
-        "Bless": "PurifyAura.png", 
-        "Poison": "PoisonNeedle.png",
-        "Burn": "BurningMark.png",
-        "Weaken": "WeakenCurse.png",
-        "Vulnerable": "StunShock.png", # Assumed mapping
-        "Silence": "SilenceSeal.png",
-        "Strike": "Strike.png",
-        "Pierce": "Strike.png", # Fallback, or StunShock
-        "Tactical Draw": "CardCycle.png", # or LuckyDraw.png
-        "Cleanse": "AntidoteKit.png",
-        "Sunder": "StunShock.png", 
-        "Venom Strike": "PoisonNeedle.png",
-        "Flame Jab": "BurningMark.png",
-        "Heal": "RestoreHp.png",
-        "Iron Skin": "IronSkin.png",
-        "Regen Brew": "RegenBrew.png",
-        "Battle Focus": "BattleFocus.png",
-        "Purify Aura": "PurifyAura.png",
-        "Card Cycle": "CardCycle.png",
-        "Guard Swap": "GuardSwap.png",
-        "Quick Fix": "RegenBrew.png",
-        "Weaken Curse": "WeakenCurse.png",
+        # === PLUS STATUS CARDS (Buffs/Healing) ===
+        "Battle Focus": "BattleFocus.png",        # +2 damage for 2 turns
+        "Iron Skin": "IronSkin.png",              # Gain 6 shield
+        "Purify Aura": "PurifyAura.png",          # Remove all negative effects
+        "Regen Brew": "RegenBrew.png",            # Heal 2 HP for 2 turns (regen)
+        "Heal": "RestoreHp.png",                  # Restore 5 HP instantly
+        
+        # === MINUS STATUS CARDS (Debuffs/Damage over time) ===
+        "Poison": "PoisonNeedle.png",             # 1 damage for 3 turns
+        "Burn": "BurningMark.png",                # 2 damage for 2 turns
+        "Weaken": "WeakenCurse.png",              # Target deals 2 less damage
+        "Vulnerable": "StunShock.png",            # Target takes +1 damage (using stun image)
+        "Silence Seal": "SilenceSeal.png",        # Block ALL cards for 1 turn
+        "Stun Shock": "StunShock.png",            # Block action cards for 1 turn
+        
+        # === NEUTRAL CARDS (Utility) ===
+        "Adrenaline": "Adrenaline.png",           # Draw +1 card next turn
+        "Card Cycle": "CardCycle.png",            # Change up to 2 cards in hand
+        "Guard Swap": "GuardSwap.png",            # Swap shields with enemy
+        "Quick Fix": "QuickFix.png",              # Heal 2 + Shield 2
+        "Weaken Curse": "WeakenCurse.png",        # Enemy deals 50% less damage
+        
+        # === BONUS CARDS (Special effects) ===
+        "Amplify": "Amplify.png",                 # Next heal +3 HP
+        "Antidote Kit": "AntidoteKit.png",        # Remove poison & burn, heal 1
+        "Counter Stance": "CounterStance.png",    # Reflect 3 damage once
+        "Gamble Coin": "GambleCoin.png",          # 50% shield +8 OR take 3 damage
+        "Lucky Draw": "LuckyDraw.png",            # Draw 2 cards
+        
+        # === LEGACY BONUS CARDS (Attack + Status) ===
+        "Venom Strike": "PoisonNeedle.png",       # Deal 3 damage + poison (function: poison attack)
+        "Flame Jab": "BurningMark.png",           # Deal 3 damage + burn (function: burn attack)
+        "Holy Light": "RestoreHp.png",            # Heal 3 + regen (function: healing)
+        "Crippling Shot": "WeakenCurse.png",      # Deal 4 damage + weaken (function: weaken attack)
+        
+        # === OTHER ATTACK CARDS ===
+        "Pierce": "Strike.png",                   # Attack card (piercing damage)
+        "Strike": "Strike.png",                   # Basic attack
+        "Sunder": "StunShock.png",                # Attack with stun effect
+        
+        # === LEGACY CARDS (from old database) ===
+        "Cleanse": "AntidoteKit.png",             # Remove negative effects (similar to Purify Aura)
+        "Tactical Draw": "CardCycle.png",         # Draw/cycle cards
+        "Bless": "PurifyAura.png",                # Buff/blessing effect
+        "Focus": "BattleFocus.png",               # Focus/concentration buff
+        "Regen": "RegenBrew.png",                 # Regeneration effect
+        "Shield Up": "IronSkin.png",              # Shield/defense buff
     }
     
     if name in mapping:

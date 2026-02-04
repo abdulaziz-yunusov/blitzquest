@@ -672,10 +672,27 @@ class Game(models.Model):
         tile_effect = None
 
         if landed_tile and landed_tile.tile_type == BoardTile.TileType.FINISH:
-            self.status = Game.Status.FINISHED
-            self.winner = player
-            self.save(update_fields=["status", "winner"])
-            won = True
+            # Assign finish rank to this player
+            # Count how many players have already finished
+            finished_count = self.players.filter(finish_rank__isnull=False).count()
+            player.finish_rank = finished_count + 1
+            player.save(update_fields=["finish_rank"])
+            
+            # Check if enough players have finished to end the game
+            total_players = self.players.count()
+            required_finishers = total_players - 1  # All but one player must finish
+            
+            if finished_count + 1 >= required_finishers:
+                # Game ends
+                self.status = Game.Status.FINISHED
+                # Winner is the player with finish_rank = 1
+                winner = self.players.filter(finish_rank=1).first()
+                self.winner = winner
+                self.save(update_fields=["status", "winner"])
+                won = True
+            else:
+                # Game continues, but this player has finished
+                won = False
         else:
             if landed_tile:
                 tile_effect = self.execute_tile_effect(player, landed_tile)
@@ -1081,6 +1098,9 @@ class Game(models.Model):
         ranked = sorted(
             players_qs,
             key=lambda p: (
+                # Players with finish_rank come first, sorted by rank (ascending)
+                # Players without finish_rank come after, sorted by position/coins/HP (descending)
+                (p.finish_rank is None, p.finish_rank or 999),
                 -int(p.position or 0),
                 -int(p.coins or 0),
                 -int(p.hp or 0),
@@ -1366,6 +1386,13 @@ class PlayerInGame(models.Model):
     eliminated_at = models.DateTimeField(null=True, blank=True)
 
     joined_at = models.DateTimeField(auto_now_add=True)
+
+    finish_rank = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Order in which this player crossed the finish line (1=first, 2=second, etc.)",
+    )
+
 
     # Card deck state (for Card Duel Mode)
     cd_deck = models.JSONField(default=list, blank=True)
