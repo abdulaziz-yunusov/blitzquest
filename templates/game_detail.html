@@ -148,7 +148,12 @@
                 <li class="player-row">
                     <div class="player-main">
                         <div class="player-avatar">
+                            {% if p.user.profile.profile_picture %}
+                            <img src="{{ p.user.profile.profile_picture.url }}" alt="{{ p.user.username }}"
+                                style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            {% else %}
                             {{ p.user.username|first|upper }}
+                            {% endif %}
                         </div>
                         <div class="player-text">
                             <div class="player-name">

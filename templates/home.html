@@ -1,13 +1,19 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}BlitzQuest – Home{% endblock %}
+{% block title %}BlitzQuest – Enter The Board World{% endblock %}
 
 {% block body_class %}home-body{% endblock %}
 {% block main_class %}full-width{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/home_v2.css' %}">
+{% endblock %}
+
 {% block content %}
-{# === Hero Section === #}
+
+{# === 1. HERO: ENTER THE BOARD WORLD === #}
+{# === 1. HERO: LEGACY (CHEST ANIMATION) === #}
 <section class="hero">
   <div class="content-container hero-inner">
     {# Left: Text Content #}
@@ -30,10 +36,10 @@
       <div class="hero-actions">
         {% if user.is_authenticated %}
         <a href="{% url 'game:game_create' %}" class="btn btn-primary hero-btn-main">
-          Create new game
+          Start Match
         </a>
         <a href="{% url 'game:game_join' %}" class="btn btn-secondary hero-btn-secondary">
-          Join with code
+          Join Fight
         </a>
         {% else %}
         <a href="{% url 'game:game_join' %}" class="btn btn-primary hero-btn-main">
@@ -74,70 +80,193 @@
   </div>
 </section>
 
-{# === Features Section === #}
-<div class="content-container">
-  <section class="feature-section">
-    <h2 class="section-title">How a match works</h2>
-
-    <div class="feature-grid">
-      {# Step 1 #}
-      <div class="feature-card">
-        <div class="feature-step-label">Step 1</div>
-        <h3>Create or join</h3>
-        <p>
-          One player creates a lobby and shares the game code.
-          Up to four players join from any browser.
-        </p>
-      </div>
-
-      {# Step 2 #}
-      <div class="feature-card">
-        <div class="feature-step-label">Step 2</div>
-        <h3>Roll & move</h3>
-        <p>
-          On your turn, roll the dice, move your token,
-          and trigger tile effects like questions and traps.
-        </p>
-      </div>
-
-      {# Step 3 #}
-      <div class="feature-card">
-        <div class="feature-step-label">Step 3</div>
-        <h3>Answer & outplay</h3>
-        <p>
-          Answer blitz questions to gain coins,
-          buy support cards, heal up, or push opponents into danger.
-        </p>
-      </div>
-
-      {# Step 4 #}
-      <div class="feature-card">
-        <div class="feature-step-label">Step 4</div>
-        <h3>Reach the goal</h3>
-        <p>
-          Be the first to reach the finish tile,
-          or survive while others run out of HP — depending on the mode.
-        </p>
-      </div>
+{# === 2. LIVE GAME ENERGY STRIP === #}
+<div class="stats-strip">
+  <div class="stats-grid">
+    <div class="stat-item">
+      <span class="stat-value">Active</span>
+      <span class="stat-label">System Status</span>
     </div>
-  </section>
-
-  {# === Info Strip === #}
-  <section class="info-strip">
-    <div class="info-item">
-      <span class="info-label">Players</span>
-      <span class="info-value">2–4</span>
+    <div class="stat-item">
+      <span class="stat-value">2–4</span>
+      <span class="stat-label">Players / Match</span>
     </div>
-
-    <div class="info-item">
-      <span class="info-label">Tech stack</span>
-      <span class="info-value">Django + PostgreSQL / SQLite</span>
+    <div class="stat-item">
+      <span class="stat-value">FAST</span>
+      <span class="stat-label">Turn Speed</span>
     </div>
-
-    <div class="info-item">
-      <span class="info-label">Game Modes</span>
-      <span class="info-value">Card Duel, Custom, Survival & Draft</span>
+    <div class="stat-item">
+      <span class="stat-value">100%</span>
+      <span class="stat-label">Fair Play</span>
     </div>
-  </section>
+  </div>
 </div>
+
+{# === 3. HOW GAME WORKS — BOARD FLOW === #}
+<section class="how-it-works">
+  <div class="content-container">
+    <h2 class="section-title-v2">Master The Flow</h2>
+
+    <div class="steps-grid">
+      <!-- Step 1 -->
+      <div class="step-card">
+        <span class="step-number">01</span>
+        <div class="step-icon">⚔️</div>
+        <h3 class="step-title">Join or Create</h3>
+        <p class="step-desc">
+          Enter the lobby. Up to 4 players connect instantly via browser. No install needed.
+        </p>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step-card">
+        <span class="step-number">02</span>
+        <div class="step-icon">🎲</div>
+        <h3 class="step-title">Roll & Move</h3>
+        <p class="step-desc">
+          Navigate the digital board. Every tile triggers a chaotic event, trap, or bonus.
+        </p>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step-card">
+        <span class="step-number">03</span>
+        <div class="step-icon">⚡</div>
+        <h3 class="step-title">Outthink</h3>
+        <p class="step-desc">
+          Answer blitz questions to earn coins. Use cards to hack the board or shield yourself.
+        </p>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="step-card">
+        <span class="step-number">04</span>
+        <div class="step-icon">🏆</div>
+        <h3 class="step-title">Dominate</h3>
+        <p class="step-desc">
+          Reach the goal first or be the last survivor. The board remembers the victors.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# === 4. GAME WORLD SHOWCASE === #}
+<section class="game-showcase">
+  <div class="showcase-container">
+    <div class="showcase-tabs">
+      <button class="tab-btn active" onclick="switchTab('board')">Board View</button>
+      <button class="tab-btn" onclick="switchTab('cards')">Card System</button>
+      <button class="tab-btn" onclick="switchTab('strategy')">Match Strategy</button>
+    </div>
+
+    <div class="showcase-preview">
+      <!-- Tab 1: Board View -->
+      <div id="tab-board" class="tab-content active">
+        <div class="mini-board-wrap">
+          <div class="mini-board-grid">
+            <div class="mini-token"></div>
+          </div>
+        </div>
+        <div class="preview-content" style="margin-top: 2rem;">
+          <h3>Tactical Board Interface</h3>
+          <p>Visualize the battlefield. Every tile counts.</p>
+        </div>
+      </div>
+
+      <!-- Tab 2: Card System -->
+      <div id="tab-cards" class="tab-content">
+        <div class="mini-deck">
+          <div class="mini-card">⚔️</div>
+          <div class="mini-card">🛡️</div>
+          <div class="mini-card">🎲</div>
+        </div>
+        <div class="preview-content" style="margin-top: 2rem;">
+          <h3>Deck Building</h3>
+          <p>Collect powerful cards to buff yourself or trap opponents.</p>
+        </div>
+      </div>
+
+      <!-- Tab 3: Match Strategy -->
+      <div id="tab-strategy" class="tab-content">
+        <div class="mini-graph">
+          <div class="graph-node gn-1"></div>
+          <div class="graph-node gn-2"></div>
+          <div class="graph-node gn-3"></div>
+          <div class="graph-line gl-1"></div>
+          <div class="graph-line gl-2"></div>
+        </div>
+        <div class="preview-content" style="margin-top: 2rem;">
+          <h3>Mind Games</h3>
+          <p>Predict your opponents' moves and counter them instantly.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  function switchTab(tabId) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+    // Show selected tab
+    document.getElementById('tab-' + tabId).classList.add('active');
+
+    // Highlight button
+    // Find button that triggered this (simpler way without passing event)
+    const buttons = document.querySelectorAll('.tab-btn');
+    if (tabId === 'board') buttons[0].classList.add('active');
+    if (tabId === 'cards') buttons[1].classList.add('active');
+    if (tabId === 'strategy') buttons[2].classList.add('active');
+  }
+</script>
+
+{# === 5. COMPETITIVE FEATURES === #}
+<section class="competitive-features">
+  <div class="features-cols">
+    <div class="feature-col">
+      <div class="col-title">Smart Strategy</div>
+      <p class="col-desc">
+        Not just luck. Use inventory items and knowledge to manipulate the odds.
+      </p>
+    </div>
+    <div class="feature-col">
+      <div class="col-title">Real Multiplayer</div>
+      <p class="col-desc">
+        Seamless WebSocket connections for instant updates and live rivalry.
+      </p>
+    </div>
+    <div class="feature-col">
+      <div class="col-title">Skill Based</div>
+      <p class="col-desc">
+        Victory goes to the sharpest mind. Prove your worth in the arena.
+      </p>
+    </div>
+  </div>
+</section>
+
+{# === 7. FINAL CONVERSION BLOCK === #}
+<section class="final-cta">
+  <div class="content-container">
+    <h2 class="hero-title-v2" style="font-size: 3.5rem;">Ready To Roll?</h2>
+    <p class="hero-subtitle-v2">
+      Browser Based • No Install • Instant Play
+    </p>
+
+    <div class="hero-actions-v2" style="margin-top: 2rem;">
+      {% if user.is_authenticated %}
+      <a href="{% url 'game:game_create' %}" class="btn-neon">
+        Enter Your First Match
+      </a>
+      {% else %}
+      <a href="{% url 'signup' %}" class="btn-neon">
+        Create Account
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
 {% endblock %}

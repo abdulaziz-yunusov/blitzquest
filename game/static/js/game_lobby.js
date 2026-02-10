@@ -59,11 +59,19 @@ function updateLobbyPlayers(state) {
                 ? '<span class="badge badge-soft badge-soft-success">Alive</span>'
                 : '<span class="badge badge-soft badge-soft-danger">Eliminated</span>';
 
+            let avatarHtml = "";
+            if (p.profile_picture_url) {
+                avatarHtml = `<img src="${escapeHtml(p.profile_picture_url)}" alt="${escapeHtml(p.username)}" 
+                               style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+            } else {
+                avatarHtml = escapeHtml(p.username.charAt(0).toUpperCase());
+            }
+
             return `
                 <li class="player-row">
                     <div class="player-main">
                         <div class="player-avatar">
-                            ${escapeHtml(p.username.charAt(0).toUpperCase())}
+                            ${avatarHtml}
                         </div>
                         <div class="player-text">
                             <div class="player-name">
