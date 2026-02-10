@@ -1,0 +1,739 @@
+/* 
+   =========================================================================
+   HOME V2 - DARK FUTURISTIC BOARD WORLD
+   =========================================================================
+   Theme: Dark futuristic, Neon strategy glow, Glass UI, Depth + Particles
+*/
+
+:root {
+    --neon-blue: #00f3ff;
+    --neon-purple: #bd00ff;
+    --neon-green: #00ff9d;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --dark-bg: #05060a;
+    --text-main: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.7);
+}
+
+/* Enhancing the global background for the "Living Board World" feel */
+/* Enhancing the global background for the "Living Board World" feel */
+body.home-body {
+    /* Allow global background to show through, just add specific overflow handling if needed */
+    overflow-x: hidden;
+}
+
+/* 
+   =========================================================================
+   ANIMATIONS
+   =========================================================================
+*/
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-15px);
+    }
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(189, 0, 255, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 25px rgba(189, 0, 255, 0.6), 0 0 10px rgba(189, 0, 255, 0.8);
+    }
+}
+
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes beam-flow {
+    0% {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* 
+   =========================================================================
+   HERO SECTION - "ENTER THE BOARD WORLD"
+   =========================================================================
+*/
+
+.hero-v2 {
+    position: relative;
+    padding: 8rem 0 6rem;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 85vh;
+}
+
+.hero-v2-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+.hero-eyebrow-v2 {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    background: rgba(189, 0, 255, 0.1);
+    border: 1px solid rgba(189, 0, 255, 0.3);
+    color: var(--neon-purple);
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(5px);
+    animation: slide-up 0.6s ease-out forwards;
+}
+
+.hero-title-v2 {
+    font-size: clamp(3rem, 5vw, 5rem);
+    line-height: 1.1;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 40px rgba(99, 102, 241, 0.3);
+    animation: slide-up 0.8s ease-out 0.1s forwards;
+    opacity: 0;
+}
+
+.hero-title-v2 span {
+    color: var(--neon-purple);
+    background: none;
+    -webkit-text-fill-color: var(--neon-purple);
+    text-shadow: 0 0 20px rgba(189, 0, 255, 0.5);
+}
+
+.hero-subtitle-v2 {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.6;
+    animation: slide-up 0.8s ease-out 0.2s forwards;
+    opacity: 0;
+}
+
+.hero-actions-v2 {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    animation: slide-up 0.8s ease-out 0.3s forwards;
+    opacity: 0;
+}
+
+/* Neon CTA Button */
+.btn-neon {
+    position: relative;
+    padding: 1rem 2.5rem;
+    background: transparent;
+    border: 1px solid var(--neon-purple);
+    color: var(--neon-purple);
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 15px rgba(189, 0, 255, 0.2);
+    z-index: 1;
+}
+
+.btn-neon::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 100%;
+    background: var(--neon-purple);
+    z-index: -1;
+    transition: all 0.3s ease;
+}
+
+.btn-neon:hover {
+    color: #000;
+    box-shadow: 0 0 30px rgba(189, 0, 255, 0.6);
+}
+
+.btn-neon:hover::before {
+    width: 100%;
+}
+
+.btn-glass {
+    padding: 1rem 2.5rem;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: #fff;
+    font-size: 1rem;
+    border-radius: 4px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.btn-glass:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #fff;
+}
+
+/* 
+   =========================================================================
+   LIVE GAME ENERGY STRIP
+   =========================================================================
+*/
+
+.stats-strip {
+    /* Flow connect: Gradient fade instead of hard box */
+    background: linear-gradient(180deg,
+            rgba(5, 6, 10, 0) 0%,
+            rgba(5, 6, 10, 0.8) 30%,
+            rgba(5, 6, 10, 0.8) 70%,
+            rgba(5, 6, 10, 0) 100%);
+    border: none;
+    backdrop-filter: blur(10px);
+    padding: 2.5rem 0;
+    margin-top: -4rem;
+    position: relative;
+    z-index: 5;
+    display: flex;
+    justify-content: center;
+    /* Add a subtle separator that fades out */
+    box-shadow: 0 0 0 transparent;
+}
+
+.stats-strip::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 10%;
+    width: 80%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-purple), transparent);
+    opacity: 0.3;
+}
+
+.stats-grid {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    max-width: 1200px;
+    padding: 0 2rem;
+}
+
+.stat-item {
+    text-align: center;
+    position: relative;
+}
+
+.stat-item::after {
+    content: '';
+    position: absolute;
+    right: -50%;
+    top: 20%;
+    height: 60%;
+    width: 1px;
+    background: var(--glass-border);
+}
+
+.stat-item:last-child::after {
+    display: none;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--neon-purple);
+    letter-spacing: 0.1em;
+}
+
+/* 
+   =========================================================================
+   HOW GAME WORKS - STEP CARDS
+   =========================================================================
+*/
+
+.how-it-works {
+    padding: 6rem 0;
+    position: relative;
+}
+
+.section-title-v2 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 4rem;
+    color: #fff;
+}
+
+.steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+.step-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 2rem;
+    position: relative;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.step-card:hover {
+    transform: translateY(-10px);
+    border-color: var(--neon-blue);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.step-number {
+    font-size: 4rem;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.03);
+    position: absolute;
+    top: 0;
+    right: 1rem;
+    line-height: 1;
+}
+
+.step-icon {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    color: var(--neon-green);
+    text-shadow: 0 0 15px rgba(0, 255, 157, 0.4);
+}
+
+.step-title {
+    font-size: 1.25rem;
+    color: #fff;
+    margin-bottom: 0.8rem;
+}
+
+.step-desc {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* 
+   =========================================================================
+   GAME WORLD SHOWCASE - TABS
+   =========================================================================
+*/
+
+.game-showcase {
+    padding: 4rem 0 8rem;
+    background: radial-gradient(circle at center, rgba(139, 92, 246, 0.05) 0%, transparent 70%);
+}
+
+.showcase-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+.showcase-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 3rem;
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    padding: 0.8rem 1.5rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-btn.active,
+.tab-btn:hover {
+    color: #fff;
+    border-bottom-color: var(--neon-purple);
+    text-shadow: 0 0 10px rgba(189, 0, 255, 0.5);
+}
+
+.showcase-preview {
+    background: var(--dark-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.preview-content {
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.tab-content {
+    display: none;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    animation: fade-in 0.4s ease;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* 
+   SHOWCASE VISUALS 
+   ----------------
+   CSS-only animations for the tab contents.
+*/
+
+/* 1. Mini 3D Board */
+.mini-board-wrap {
+    perspective: 1000px;
+    width: 300px;
+    height: 200px;
+    position: relative;
+    transform-style: preserve-3d;
+}
+
+.mini-board-grid {
+    width: 100%;
+    height: 100%;
+    background:
+        linear-gradient(rgba(189, 0, 255, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(189, 0, 255, 0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
+    transform: rotateX(60deg) rotateZ(-20deg);
+    border: 2px solid rgba(189, 0, 255, 0.3);
+    box-shadow: 0 0 30px rgba(189, 0, 255, 0.1);
+    position: relative;
+    animation: board-float 6s ease-in-out infinite;
+}
+
+.mini-token {
+    width: 30px;
+    height: 30px;
+    background: var(--neon-blue);
+    position: absolute;
+    top: 40px;
+    left: 40px;
+    border-radius: 50%;
+    box-shadow: 0 0 15px var(--neon-blue);
+    transform: translateZ(20px);
+    animation: token-path 4s steps(1) infinite;
+}
+
+@keyframes board-float {
+
+    0%,
+    100% {
+        transform: rotateX(60deg) rotateZ(-20deg) translateY(0);
+    }
+
+    50% {
+        transform: rotateX(60deg) rotateZ(-20deg) translateY(-20px);
+    }
+}
+
+@keyframes token-path {
+    0% {
+        top: 40px;
+        left: 40px;
+    }
+
+    25% {
+        top: 40px;
+        left: 120px;
+    }
+
+    50% {
+        top: 120px;
+        left: 120px;
+    }
+
+    75% {
+        top: 120px;
+        left: 200px;
+    }
+
+    100% {
+        top: 40px;
+        left: 40px;
+    }
+}
+
+/* 2. Mini Cards */
+.mini-deck {
+    display: flex;
+    gap: -20px;
+    padding-top: 40px;
+}
+
+.mini-card {
+    width: 80px;
+    height: 120px;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-radius: 8px;
+    position: relative;
+    margin-left: -20px;
+    transition: transform 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.mini-deck:hover .mini-card {
+    margin-left: 10px;
+}
+
+.mini-card:nth-child(1) {
+    transform: rotate(-10deg);
+    z-index: 1;
+}
+
+.mini-card:nth-child(2) {
+    transform: rotate(0deg) translateY(-10px);
+    z-index: 2;
+    border-color: var(--neon-purple);
+}
+
+.mini-card:nth-child(3) {
+    transform: rotate(10deg);
+    z-index: 1;
+}
+
+.mini-card:hover {
+    transform: translateY(-30px) scale(1.1) !important;
+    z-index: 10;
+    box-shadow: 0 0 20px var(--neon-blue);
+}
+
+/* 3. Strategy Graph */
+.mini-graph {
+    width: 250px;
+    height: 150px;
+    position: relative;
+}
+
+.graph-node {
+    width: 12px;
+    height: 12px;
+    background: var(--neon-green);
+    border-radius: 50%;
+    position: absolute;
+    box-shadow: 0 0 10px var(--neon-green);
+    z-index: 2;
+}
+
+.graph-line {
+    position: absolute;
+    height: 2px;
+    background: rgba(0, 255, 157, 0.3);
+    transform-origin: left center;
+    z-index: 1;
+}
+
+.gn-1 {
+    top: 20%;
+    left: 10%;
+    animation: pulse-node 2s infinite;
+}
+
+.gn-2 {
+    top: 50%;
+    left: 50%;
+    animation: pulse-node 2s infinite 0.5s;
+}
+
+.gn-3 {
+    top: 80%;
+    left: 80%;
+    animation: pulse-node 2s infinite 1s;
+}
+
+.gl-1 {
+    top: 24%;
+    left: 12%;
+    width: 110px;
+    transform: rotate(25deg);
+}
+
+.gl-2 {
+    top: 53%;
+    left: 52%;
+    width: 100px;
+    transform: rotate(35deg);
+}
+
+@keyframes pulse-node {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.5);
+        opacity: 0.7;
+    }
+}
+
+/* 
+   =========================================================================
+   COMPETITIVE FEATURES
+   =========================================================================
+*/
+
+.features-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 0;
+    border-top: 1px solid var(--glass-border);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.feature-col {
+    padding: 4rem 2rem;
+    border-right: 1px solid var(--glass-border);
+    text-align: center;
+    background: rgba(5, 6, 10, 0.5);
+    transition: background 0.3s ease;
+}
+
+.feature-col:last-child {
+    border-right: none;
+}
+
+.feature-col:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.col-title {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: #fff;
+}
+
+.col-desc {
+    color: var(--text-muted);
+}
+
+/* 
+   =========================================================================
+   FINAL CTA
+   =========================================================================
+*/
+
+.final-cta {
+    padding: 8rem 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.final-cta::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+    z-index: -1;
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+    .stats-grid {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .stat-item::after {
+        display: none;
+    }
+
+    .hero-title-v2 {
+        font-size: 2.5rem;
+    }
+
+    .features-cols {
+        grid-template-columns: 1fr;
+    }
+
+    .feature-col {
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+    }
+}
