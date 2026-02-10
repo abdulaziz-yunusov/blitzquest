@@ -46,9 +46,10 @@
                         class="{% if request.resolver_match.url_name == 'game_join' %}active{% endif %}">Join</a>
                 </nav>
 
+
                 {# User Menu / Authentication Actions #}
                 <div class="user-nav">
-                    {% if user.is_authenticated %}
+                    {% if user.is_authenticated and not user.username|slice:":5" == "Guest" %}
                     <div class="user-menu-container">
                         <button class="user-menu-trigger" aria-label="Open user menu">
                             <div class="user-avatar">

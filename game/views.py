@@ -507,13 +507,17 @@ def home(request):
     return render(request, "home.html")
 
 
-@login_required
 def game_list(request):
     """
     Displays a list of games the user can join or is already part of.
     """
     waiting_games = Game.objects.filter(status=Game.Status.WAITING).order_by("-created_at")
-    my_games = Game.objects.filter(players__user=request.user).distinct().order_by("-created_at")
+    
+    # Only show "my games" for authenticated users
+    if request.user.is_authenticated:
+        my_games = Game.objects.filter(players__user=request.user).distinct().order_by("-created_at")
+    else:
+        my_games = Game.objects.none()
 
     context = {"waiting_games": waiting_games, "my_games": my_games}
     return render(request, "game_list.html", context)
@@ -525,6 +529,11 @@ def game_create(request):
     Handles the creation of a new game via form submission.
     Initializes the game, assigns a code, and adds the creator as the first player.
     """
+    # Prevent Guest users from creating games
+    if request.user.username.startswith("Guest"):
+        messages.warning(request, "Please login or sign up to create a game.")
+        return redirect("login")
+    
     if request.method == "POST":
         form = GameCreateForm(request.POST)
         if form.is_valid():
@@ -561,7 +570,6 @@ def game_create(request):
     return render(request, "game_create.html", {"form": form})
 
 
-@login_required
 def game_join(request):
     """
     Allows a user to join an existing game by entering its code.
@@ -577,7 +585,6 @@ def game_join(request):
     return render(request, "game_join.html", {"form": form})
 
 
-@login_required
 def join_game_by_code(request, code):
     """Join a game automatically via GET request (e.g., from QR code)."""
     return _join_game_logic(request, code)
@@ -585,10 +592,37 @@ def join_game_by_code(request, code):
 
 def _join_game_logic(request, code):
     """Centralized logic for joining a game by its code."""
+    
+    # Handle anonymous users by creating a guest account
+    if not request.user.is_authenticated:
+        from django.contrib.auth import get_user_model, login as auth_login
+        User = get_user_model()
+        
+        # Generate unique guest username
+        base_username = "Guest"
+        username = base_username
+        counter = 0
+        
+        # Find available guest username
+        while User.objects.filter(username=username).exists():
+            counter += 1
+            username = f"{base_username}_{counter}"
+        
+        # Create guest user with random password
+        guest_user = User.objects.create_user(
+            username=username,
+            password=generate_game_code(length=12),  # Random password
+            first_name="Guest",
+            last_name=""
+        )
+        
+        # Automatically log in the guest user
+        auth_login(request, guest_user)
+    
     try:
         game = Game.objects.get(code__iexact=code)
     except Game.DoesNotExist:
-        messages.error(request, "Game with this code does not exist.")
+        messages.error(request, "This game code is invalid or has expired. The game may have been deleted.")
         return redirect("game:game_join")
 
     if game.status != Game.Status.WAITING:

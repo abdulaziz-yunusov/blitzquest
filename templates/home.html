@@ -36,8 +36,11 @@
           Join with code
         </a>
         {% else %}
-        <a href="/accounts/login/" class="btn btn-primary hero-btn-main">
-          Login to start playing
+        <a href="{% url 'game:game_join' %}" class="btn btn-primary hero-btn-main">
+          Join with code
+        </a>
+        <a href="{% url 'login' %}" class="btn btn-secondary hero-btn-secondary">
+          Login to create game
         </a>
         {% endif %}
       </div>
