@@ -481,11 +481,20 @@ class Game(models.Model):
 
         players_payload = []
         for p in players_list:
+            # Safely get profile picture URL
+            prof_pic = None
+            try:
+                if hasattr(p.user, "profile") and p.user.profile.profile_picture:
+                    prof_pic = p.user.profile.profile_picture.url
+            except Exception:
+                pass
+
             players_payload.append(
                 {
                     "id": p.id,
                     "user_id": p.user_id,
                     "username": p.user.username,
+                    "profile_picture_url": prof_pic,
                     "turn_order": p.turn_order,
                     "hp": p.hp,
                     "coins": p.coins,
@@ -799,7 +808,12 @@ class Game(models.Model):
                 if self.mode == self.Mode.SURVIVAL:
                     diff = self.survival_difficulty  # "easy"|"normal"|"hard"
 
-                self.pending_question = { **generate_math_question(diff), "for_player_id": player.id }
+                # Try fetching from DB first
+                q_data = Question.get_random(diff)
+                if not q_data:
+                    q_data = generate_math_question(diff)
+
+                self.pending_question = { **q_data, "for_player_id": player.id }
 
                 # lock turn to the same player who must answer
                 players = list(self.players.order_by("turn_order"))
@@ -1561,6 +1575,41 @@ class Question(models.Model):
     def __str__(self) -> str:
         base = self.kanji if self.kanji else self.text[:30]
         return f"Q#{self.id}: {base}"
+
+    @classmethod
+    def get_random(cls, difficulty="normal"):
+        """
+        Fetches a random question from the database by difficulty.
+        Returns a dict compatible with the game's question structure,
+        or None if no questions exist.
+        """
+        qs = cls.objects.filter(difficulty=difficulty)
+        count = qs.count()
+        if count == 0:
+            return None
+        
+        # Pick one
+        idx = _r.randint(0, count - 1)
+        q = qs[idx]
+
+        # Format choices
+        choices = [q.option_a, q.option_b, q.option_c, q.option_d]
+        correct_map = {"A": 0, "B": 1, "C": 2, "D": 3}
+        correct_index = correct_map.get(q.correct_option, 0)
+
+        # Shuffle choices slightly? Standard is options are fixed A-D in admin.
+        # But game expects list of strings and an index.
+        # If we shuffle, we must track the correct string.
+        correct_answer_text = choices[correct_index]
+        _r.shuffle(choices)
+        new_correct_index = choices.index(correct_answer_text)
+
+        return {
+            "id": f"db_{q.id}",
+            "prompt": q.text + (f" ({q.kanji})" if q.kanji else ""),
+            "choices": choices,
+            "correct_index": new_correct_index,
+        }
 
 
 class SupportCardType(models.Model):
